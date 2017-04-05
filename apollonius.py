@@ -20,13 +20,15 @@ class Circle(Obj):
         # if n==0 the force has no direction!
         if n == 0: return array([0,0])
         if n < s.r:
-            print("err");
             return -f * (1 - s.r/n)
         else:
             return f * (1 - s.r/n)
 
     def plt(s, ax):
         ax.add_patch(plt.Circle(s.p, s.r))
+
+    def start(s):
+        return s.p, s.r
 
 class Line(Obj):
     def __init__(s, a, c, n):
@@ -55,6 +57,9 @@ class Line(Obj):
         xmin, xmax = ax.get_xbound()
         ax.add_line(matplotlib.lines.Line2D([xmin,xmax], [s.a*xmin+s.c, s.a*xmax+s.c], linewidth=2, color='blue'))
 
+    def start(s):
+        return array([0, 0]), 1
+
 def err_vect(v, n):
     """give the error vector given vector v and len l"""
     if norm(v) == 0: return v*0
@@ -64,8 +69,39 @@ def error_vectors(v):
     n = sum([norm(f) for f in v])/3
     return [err_vect(f, n) for f in v]
 
-def start_pos(C):
-    return array(C.p), C.r
+def find_inscribed(objects, ax):
+    i = 0
+    P = array([0, 0])
+    r = 0
+    for o in objects:
+        if type(o) is Circle:
+            Pi, ri = o.start()
+            r += ri
+            P = P + Pi
+            i += 1
+    if i:
+        P = P/i
+        r /= i
+    #print("try1:", P, r)
+    #P, r = objects[2].start()
+    #print("try2:", P, r)
+
+    #p = plt.Circle(P, r, fill=False, color="%f"%(0/26.0))
+    #ax.add_patch(p)
+
+    for i in range(1000):
+        f = [obj.force(P) for obj in objects]   # Distance between P and objects
+        ev = error_vectors(f)                  # Error rel to average
+        P = P + (sum(ev))/3                     # new P
+
+        n = [norm(v)**2 for v in ev]
+        e = sum(n)
+        #print(i, n, P, e)
+        r = sum([norm(fi) for fi in  f])/3
+        #p = plt.Circle(P, r, fill=False)
+        #ax.add_patch(p)
+        if e < 0.000001: break
+    return P, r
 
 C1 = Circle( 0, 0, 2.0)
 C2 = Circle(10, 0, 8.0)
@@ -73,34 +109,30 @@ C3 = Circle( 1, 8, 1.0)
 L1 = Line(2, 10, 1)
 L2 = Line(-1, 9, 1)
 L3 = Line(0, -9, 0)
-objects = (L1, L2, L3)
-
-P, r = start_pos(C2)
-P = array([0, 0])
+stack = [[L1, L2, L3]]
 
 fig = plt.figure(1)
 plt.axis([-10, 20, -10, 10])
 ax = fig.add_subplot(1,1,1)
-[obj.plt(ax) for obj in objects]
-
-p = plt.Circle(P, r, fill=False, color="%f"%(0/26.0))
-ax.add_patch(p)
-
+[obj.plt(ax) for obj in stack[0]]
+vol = 0
 for i in range(1000):
-    f = [obj.force(P) for obj in objects]   # Distance between P and objects
-    ev = error_vectors(f)                  # Error rel to average
-    P = P + (sum(ev))/3                     # new P
+    objects = stack.pop(0)
+    #stack = stack[3:]
 
-    n = [norm(v)**2 for v in ev]
-    e = sum(n)
-    print(i, n, P, e)
-    r = sum([norm(fi) for fi in  f])/3
-    p = plt.Circle(P, r, fill=False)
+    P, r = find_inscribed(objects, ax)
+    if any(map(lambda c: c.r < r, filter(lambda o: type(o) is Circle, objects))):
+        break
+    #if r < 0.01:
+        #break
+    C = Circle(P[0], P[1], r)
+    stack.append([objects[0], objects[1], C])
+    stack.append([objects[1], objects[2], C])
+    stack.append([objects[0], objects[2], C])
+    #print (P, r)
+    p = plt.Circle(P, r, fill=False, color=".6")
     ax.add_patch(p)
-    if e < 0.001: break
-
-print (P, r)
-p = plt.Circle(P, r, fill=False, color=".6")
-ax.add_patch(p)
+    vol += math.pi * r**2
 
 plt.show()
+print(vol)
