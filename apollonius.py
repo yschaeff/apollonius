@@ -9,8 +9,8 @@ class Obj:
     pass
 
 class Circle(Obj):
-    def __init__(s, x, y, r):
-        s.p = array([x, y])
+    def __init__(s, p, r):
+        s.p = p
         s.r = r
 
     def force(s, p):
@@ -29,6 +29,23 @@ class Circle(Obj):
 
     def start(s):
         return s.p, s.r
+
+class Line2(Obj):
+    def __init__(s, n, o):
+        s.n = n/norm(n) #normal
+        s.o = o #origin of line
+
+    def force(s, p): #distance from point to this line
+        return s.n * dot((s.o-p), s.n)
+
+    def plt(s, ax):
+        xmin, xmax = ax.get_xbound()
+        ymin = s.o[1] - (s.n[0]/s.n[1])*(xmin-s.o[0])
+        ymax = s.o[1] - (s.n[0]/s.n[1])*(xmax-s.o[0])
+        ax.add_line(matplotlib.lines.Line2D([xmin,xmax], [ymin, ymax], linewidth=2, color='blue'))
+
+    def start(s):
+        return array([0, 0]), 1
 
 class Line(Obj):
     def __init__(s, a, c, n):
@@ -103,10 +120,11 @@ def find_inscribed(objects, ax):
         if e < 0.000001: break
     return P, r
 
-C1 = Circle( 0, 0, 2.0)
-C2 = Circle(10, 0, 8.0)
-C3 = Circle( 1, 8, 1.0)
-L1 = Line(2, 10, 1)
+C1 = Circle(array([ 0, 0]), 2.0)
+C2 = Circle(array([10, 0]), 8.0)
+C3 = Circle(array([ 1, 8]), 1.0)
+L1 = Line2(array([2, -1]), array([-5,0]))
+#L1 = Line(2, 10, 1)
 L2 = Line(-1, 9, 1)
 L3 = Line(0, -9, 0)
 stack = [[L1, L2, L3]]
@@ -125,7 +143,7 @@ for i in range(1000):
         break
     #if r < 0.01:
         #break
-    C = Circle(P[0], P[1], r)
+    C = Circle(P, r)
     stack.append([objects[0], objects[1], C])
     stack.append([objects[1], objects[2], C])
     stack.append([objects[0], objects[2], C])
