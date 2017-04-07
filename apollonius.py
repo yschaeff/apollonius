@@ -30,6 +30,10 @@ class Circle(Obj):
         #m = s.o + (f*norm(s.n))/norm(f)
         #return p-m
 
+    def is_inverted(s, p):
+        """ true if p is in the circle"""
+        return norm(s.o-p) <= norm(s.n)
+
     def plt(s, ax):
         radius = norm(s.n)
         ax.add_patch(plt.Circle(s.p, radius))
@@ -38,6 +42,14 @@ class Line2(Obj):
     def distance(s, p):
         n = s.n/norm(s.n)
         return n * dot((s.o-p), n)
+
+    def is_inverted(s, p):
+        """ true if p is on wrong side of line"""
+        ##TODO, this can be a lot simpler. I think.
+        d = s.distance(p)
+        d = d/norm(d)
+        n = s.n/norm(s.n)
+        return  norm(d+n) > norm(d)
 
     def plt(s, ax):
         xmin, xmax = ax.get_xbound()
@@ -75,7 +87,8 @@ def find_inscribed(objects, ax):
         if e < 0.00001:
             break
     r = avg([norm(fi) for fi in  f])
-    return P, r
+    success = all(map(lambda c: not c.is_inverted(P), objects))
+    return P, r, success
 
 L1 = Line2(array([-5,  0]), array([ 2, -1]))
 L2 = Line2(array([ 9,  0]), array([-1, -1]))
@@ -91,8 +104,8 @@ for i in range(2000):
     objects = stack.pop(0)
     #objects = stack.pop()
 
-    P, r = find_inscribed(objects, ax)
-    if any(map(lambda c: norm(c.o-P) < norm(c.n), filter(lambda o: type(o) is Circle, objects))):
+    P, r, success = find_inscribed(objects, ax)
+    if not success:
         print(i, r, list(map(lambda c: norm(c.n) < r, filter(lambda o: type(o) is Circle, objects))))
         print(objects)
         print(P, r)
