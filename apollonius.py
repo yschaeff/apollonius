@@ -6,37 +6,40 @@ from numpy import array, dot
 from numpy.linalg import norm
 
 class Obj:
-    pass
+    def __init__(s, origin, normal):
+        s.o = origin
+        s.n = normal
+    def origin(s):
+        return s.o
+    def __repr__(s):
+        return "origin={0}, normal={1}".format(s.o, s.n)
 
 class Circle(Obj):
-    def __init__(s, p, r):
-        s.p = p
-        s.r = r
-
-    def force(s, p):
-        """Find the force circle C with radius r applies to point P """
-        f = s.p - p
+    def distance(s, p): ## returns vector with direction and amplitude
+        radius = norm(s.n)
+        f = s.o - p
         n = norm(f)
-        # if n==0 the force has no direction!
-        if n == 0: return array([0,0])
-        if n < s.r:
-            return -f * (1 - s.r/n)
+        if n == 0: return s.o*0
+        if n < radius:
+            return -.5 * f * (1 - radius/n)
         else:
-            return f * (1 - s.r/n)
+            return f * (1 - radius/n)
+
+        #radius = norm(s.n)
+        #f = s.o - p
+        #n = norm(f)
+        #if n == 0: return s.o*0
+        #m = (f * radius)/n
+        #return (m - p)
 
     def plt(s, ax):
-        ax.add_patch(plt.Circle(s.p, s.r))
-
-    def start(s):
-        return s.p, s.r
+        radius = norm(s.n)
+        ax.add_patch(plt.Circle(s.p, radius))
 
 class Line2(Obj):
-    def __init__(s, n, o):
-        s.n = n/norm(n) #normal
-        s.o = o #origin of line
-
-    def force(s, p): #distance from point to this line
-        return s.n * dot((s.o-p), s.n)
+    def distance(s, p):
+        n = s.n/norm(s.n)
+        return n * dot((s.o-p), n)
 
     def plt(s, ax):
         xmin, xmax = ax.get_xbound()
@@ -44,89 +47,43 @@ class Line2(Obj):
         ymax = s.o[1] - (s.n[0]/s.n[1])*(xmax-s.o[0])
         ax.add_line(matplotlib.lines.Line2D([xmin,xmax], [ymin, ymax], linewidth=2, color='blue'))
 
-    def start(s):
-        return array([0, 0]), 1
-
-class Line(Obj):
-    def __init__(s, a, c, n):
-        s.a = a # f(x): a*x + c
-        s.c = c
-        s.n = array([a,-1])
-        if n:
-            s.n = array([-a, 1])
-        #s.n = n # reverse normal?
-        # This is a terrible way of describing a line, vertical line is impossible
-        # If a is positive normal will point to +Y
-        # If a is negative normal will point to -Y
-
-    def force(s, p):
-        """Find the force circle C with radius r applies to point P """
-        x = (p[0] + s.a*p[1] - s.a*s.c) / (s.a**2 + 1)
-        y = (s.a*(p[0]+s.a*p[1]) + s.c) / (s.a**2 + 1)
-        d = array([x, y])
-        result_v = d-p
-        #TODO result_v must be in direction of normal, otherwise switch sign
-        if norm(s.n + result_v) < norm(result_v):
-            return -result_v
-        return result_v
-
-    def plt(s, ax):
-        xmin, xmax = ax.get_xbound()
-        ax.add_line(matplotlib.lines.Line2D([xmin,xmax], [s.a*xmin+s.c, s.a*xmax+s.c], linewidth=2, color='blue'))
-
-    def start(s):
-        return array([0, 0]), 1
-
 def err_vect(v, n):
     """give the error vector given vector v and len l"""
     if norm(v) == 0: return v*0
     return  v - (v/norm(v) * n)
 
 def error_vectors(v):
-    n = sum([norm(f) for f in v])/3
+    n = avg([norm(f) for f in v])
     return [err_vect(f, n) for f in v]
 
+def avg(summable):
+    return sum(summable)/len(summable)
+
+def starting_point(objects):
+    circles = [o.origin() for o in objects if type(o) is Circle]
+    if not circles:
+        return  0 * objects[0].origin()
+    return avg(circles)
+
+
 def find_inscribed(objects, ax):
-    i = 0
-    P = array([0, 0])
-    r = 0
-    for o in objects:
-        if type(o) is Circle:
-            Pi, ri = o.start()
-            r += ri
-            P = P + Pi
-            i += 1
-    if i:
-        P = P/i
-        r /= i
-    #print("try1:", P, r)
-    #P, r = objects[2].start()
-    #print("try2:", P, r)
-
-    #p = plt.Circle(P, r, fill=False, color="%f"%(0/26.0))
-    #ax.add_patch(p)
-
+    P = starting_point(objects)
     for i in range(1000):
-        f = [obj.force(P) for obj in objects]   # Distance between P and objects
+        f = [obj.distance(P) for obj in objects]   # Distance between P and objects
         ev = error_vectors(f)                  # Error rel to average
-        P = P + (sum(ev))/3                     # new P
+        P = P + avg(ev)                     # new P
 
         n = [norm(v)**2 for v in ev]
         e = sum(n)
-        #print(i, n, P, e)
-        r = sum([norm(fi) for fi in  f])/3
-        #p = plt.Circle(P, r, fill=False)
-        #ax.add_patch(p)
-        if e < 0.000001: break
+        r = avg([norm(fi) for fi in  f])
+        if e < 0.00001: break
+        #print(e)
+        #if e < 0.000001 and r < norm(min(objects, key=lambda o: norm(o.n)).n): break
     return P, r
 
-C1 = Circle(array([ 0, 0]), 2.0)
-C2 = Circle(array([10, 0]), 8.0)
-C3 = Circle(array([ 1, 8]), 1.0)
-L1 = Line2(array([2, -1]), array([-5,0]))
-#L1 = Line(2, 10, 1)
-L2 = Line(-1, 9, 1)
-L3 = Line(0, -9, 0)
+L1 = Line2(array([-5,  0]), array([ 2, -1]))
+L2 = Line2(array([ 9,  0]), array([-1, -1]))
+L3 = Line2(array([ 0, -9]), array([ 0,  1]))
 stack = [[L1, L2, L3]]
 
 fig = plt.figure(1)
@@ -134,16 +91,21 @@ plt.axis([-10, 20, -10, 10])
 ax = fig.add_subplot(1,1,1)
 [obj.plt(ax) for obj in stack[0]]
 vol = 0
-for i in range(1000):
+for i in range(2000):
     objects = stack.pop(0)
-    #stack = stack[3:]
+    #objects = stack.pop()
 
     P, r = find_inscribed(objects, ax)
-    if any(map(lambda c: c.r < r, filter(lambda o: type(o) is Circle, objects))):
+    if any(map(lambda c: norm(c.o-P) < norm(c.n), filter(lambda o: type(o) is Circle, objects))):
+        print(i, r, list(map(lambda c: norm(c.n) < r, filter(lambda o: type(o) is Circle, objects))))
+        print(objects)
+        print(P, r)
+        print("result in other circle, aborting")
+        p = plt.Circle(P, r, fill=False, color="red")
+        ax.add_patch(p)
         break
-    #if r < 0.01:
-        #break
-    C = Circle(P, r)
+    C = Circle(P, array([r, 0]))
+    objects.sort(key=lambda o: norm(o.n), reverse=True)
     stack.append([objects[0], objects[1], C])
     stack.append([objects[1], objects[2], C])
     stack.append([objects[0], objects[2], C])
@@ -151,6 +113,7 @@ for i in range(1000):
     p = plt.Circle(P, r, fill=False, color=".6")
     ax.add_patch(p)
     vol += math.pi * r**2
+    print(i)
 
-plt.show()
 print(vol)
+plt.show()
