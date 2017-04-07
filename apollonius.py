@@ -20,17 +20,15 @@ class Circle(Obj):
         f = s.o - p
         n = norm(f)
         if n == 0: return s.o*0
+        direction = 1
         if n < radius:
-            return -.5 * f * (1 - radius/n)
-        else:
-            return f * (1 - radius/n)
+            direction = -0.5
+        return direction * f * (1 - radius/n)
 
-        #radius = norm(s.n)
-        #f = s.o - p
-        #n = norm(f)
-        #if n == 0: return s.o*0
-        #m = (f * radius)/n
-        #return (m - p)
+        #f = p-s.o
+        #if norm(f) == 0: return s.o*0
+        #m = s.o + (f*norm(s.n))/norm(f)
+        #return p-m
 
     def plt(s, ax):
         radius = norm(s.n)
@@ -68,17 +66,15 @@ def starting_point(objects):
 
 def find_inscribed(objects, ax):
     P = starting_point(objects)
-    for i in range(1000):
+    for i in range(1000): #just an upper bound, real condition is e
         f = [obj.distance(P) for obj in objects]   # Distance between P and objects
         ev = error_vectors(f)                  # Error rel to average
         P = P + avg(ev)                     # new P
-
         n = [norm(v)**2 for v in ev]
         e = sum(n)
-        r = avg([norm(fi) for fi in  f])
-        if e < 0.00001: break
-        #print(e)
-        #if e < 0.000001 and r < norm(min(objects, key=lambda o: norm(o.n)).n): break
+        if e < 0.00001:
+            break
+    r = avg([norm(fi) for fi in  f])
     return P, r
 
 L1 = Line2(array([-5,  0]), array([ 2, -1]))
@@ -107,13 +103,15 @@ for i in range(2000):
     C = Circle(P, array([r, 0]))
     objects.sort(key=lambda o: norm(o.n), reverse=True)
     stack.append([objects[0], objects[1], C])
-    stack.append([objects[1], objects[2], C])
     stack.append([objects[0], objects[2], C])
+    stack.append([objects[1], objects[2], C])
     #print (P, r)
     p = plt.Circle(P, r, fill=False, color=".6")
     ax.add_patch(p)
     vol += math.pi * r**2
-    print(i)
+    if i%100 == 0:
+        print(i)
+print(i)
 
 print(vol)
 plt.show()
