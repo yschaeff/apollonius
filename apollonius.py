@@ -75,6 +75,26 @@ def starting_point(objects):
         return  0 * objects[0].origin()
     return avg(circles)
 
+def sign(p, objects): #only circles! DIM
+    obj = list(map(lambda o: p-o.o, objects))
+    first = obj[0]
+    obj = map(lambda o: dot(first, o), obj[1:])
+    return sum(obj)
+
+def in_volume(p, objects): #
+    """ This works when object are DIM+1 circles
+        sadly most of these cases happen at the edge. """
+    signs = None
+    for i in range(len(objects)):
+        O = objects[:i] + objects[i+1:]
+        s = sign(p, O) > 0
+        if signs == None:
+            signs = s
+        if signs != s:
+            return False
+    return True
+
+
 
 def find_inscribed(objects, ax):
     P = starting_point(objects)
@@ -87,44 +107,65 @@ def find_inscribed(objects, ax):
         if e < 0.00001:
             break
     r = avg([norm(fi) for fi in  f])
-    success = all(map(lambda c: not c.is_inverted(P), objects))
+    #success = all(map(lambda c: not c.is_inverted(P), objects))
+    circles = [o for o in objects if type(o) is Circle]
+    success = 1
+    success &= all(map(lambda c: norm(c.n) > r, circles))
+    #also P must be inside polygon spanned by objects
+    if len(circles) == DIM+1:
+        success &= in_volume(P, circles)
     return P, r, success
 
-L1 = Line2(array([-5,  0]), array([ 2, -1]))
-L2 = Line2(array([ 9,  0]), array([-1, -1]))
-L3 = Line2(array([ 0, -9]), array([ 0,  1]))
-stack = [[L1, L2, L3]]
+DIM = 3
+
+if DIM == 2:
+    print("$fn=40;")
+    L1 = Line2(array([-5,  0]), array([ 2, -1]))
+    L2 = Line2(array([ 9,  0]), array([-1, -1]))
+    L3 = Line2(array([ 0, -9]), array([ 0,  1]))
+    queue = [[L1, L2, L3]]
+elif DIM == 3:
+    print("$fn=40;")
+    L1 = Line2(array([-5,  0, 0]), array([ 2, -1, 1]))
+    L2 = Line2(array([ 9,  0, 0]), array([-1, -1, 1]))
+    L3 = Line2(array([ 0, -9, 0]), array([ 0,  1, 1]))
+    L4 = Line2(array([ 0, 0, 9]), array([ 0,  0, -1]))
+    queue = [[L1, L2, L3, L4]]
+else:
+    print("unsupported DIM")
+    import sys
+    sys.exit(1)
 
 fig = plt.figure(1)
 plt.axis([-10, 20, -10, 10])
 ax = fig.add_subplot(1,1,1)
-[obj.plt(ax) for obj in stack[0]]
+[obj.plt(ax) for obj in queue[0]]
 vol = 0
-for i in range(2000):
-    objects = stack.pop(0)
-    #objects = stack.pop()
+for i in range(80):
+    if not queue: break
+    objects = queue.pop(0)
 
     P, r, success = find_inscribed(objects, ax)
     if not success:
-        print(i, r, list(map(lambda c: norm(c.n) < r, filter(lambda o: type(o) is Circle, objects))))
-        print(objects)
-        print(P, r)
-        print("result in other circle, aborting")
+        #print("result in other circle, aborting")
         p = plt.Circle(P, r, fill=False, color="red")
         ax.add_patch(p)
-        break
+        continue
     C = Circle(P, array([r, 0]))
-    objects.sort(key=lambda o: norm(o.n), reverse=True)
-    stack.append([objects[0], objects[1], C])
-    stack.append([objects[0], objects[2], C])
-    stack.append([objects[1], objects[2], C])
-    #print (P, r)
+    if DIM == 2:
+        print("translate([%f, %f, 0]) circle(%f);" %(P[0], P[1], r*1.01))
+    elif DIM == 3:
+        print("translate([%f, %f, %f]) sphere(%f);" %(P[0], P[1], P[2], r*1.01))
+    for idx, o in enumerate(objects):
+        obj = objects[:]
+        obj[idx] = C
+        queue.append(obj)
     p = plt.Circle(P, r, fill=False, color=".6")
     ax.add_patch(p)
     vol += math.pi * r**2
-    if i%100 == 0:
-        print(i)
-print(i)
+    #if i%100 == 0:
+        #print(i)
+#print(i)
 
-print(vol)
-plt.show()
+#print(vol)
+#plt.show()
