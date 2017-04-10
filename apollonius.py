@@ -5,6 +5,11 @@ import matplotlib
 from numpy import array, dot
 from numpy.linalg import norm
 
+DIM = 3
+MAX_OBJECTS = 20
+MAX_ERROR = 0.00001
+MAX_TRIES = 1000
+
 class Obj:
     def __init__(s, origin, normal):
         s.o = origin
@@ -98,13 +103,13 @@ def in_volume(p, objects): #
 
 def find_inscribed(objects, ax):
     P = starting_point(objects)
-    for i in range(1000): #just an upper bound, real condition is e
+    for i in range(MAX_TRIES): #just an upper bound, real condition is e
         f = [obj.distance(P) for obj in objects]   # Distance between P and objects
         ev = error_vectors(f)                  # Error rel to average
         P = P + avg(ev)                     # new P
         n = [norm(v)**2 for v in ev]
         e = sum(n)
-        if e < 0.00001:
+        if e < MAX_ERROR:
             break
     r = avg([norm(fi) for fi in  f])
     #success = all(map(lambda c: not c.is_inverted(P), objects))
@@ -115,8 +120,6 @@ def find_inscribed(objects, ax):
     if len(circles) == DIM+1:
         success &= in_volume(P, circles)
     return P, r, success
-
-DIM = 3
 
 if DIM == 2:
     print("$fn=40;")
@@ -141,7 +144,7 @@ plt.axis([-10, 20, -10, 10])
 ax = fig.add_subplot(1,1,1)
 [obj.plt(ax) for obj in queue[0]]
 vol = 0
-for i in range(80):
+for i in range(MAX_OBJECTS):
     if not queue: break
     objects = queue.pop(0)
 
