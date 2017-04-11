@@ -6,61 +6,62 @@ from numpy import array, dot
 from numpy.linalg import norm
 
 DIM = 3
-MAX_OBJECTS = 20
+MAX_OBJECTS = 30
 MAX_ERROR = 0.00001
 MAX_TRIES = 1000
 
 class Obj:
-    def __init__(s, origin, normal):
-        s.o = origin
-        s.n = normal
-    def origin(s):
-        return s.o
-    def __repr__(s):
-        return "origin={0}, normal={1}".format(s.o, s.n)
+    def __init__(self, vector, scalar):
+        self.vector = vector
+        self.scalar = scalar
+    def origin(self):
+        return self.vector
+    #def intersect(s, circle):
+        #return s.distance(circle.o) + circle.o
+    def __repr__(self):
+        return "origin={0}, normal={1}".format(self.o, self.n)
 
 class Circle(Obj):
-    def distance(s, p): ## returns vector with direction and amplitude
-        radius = norm(s.n)
-        f = s.o - p
+    def distance(self, p): ## returns vector with direction and amplitude
+        radius = self.scalar
+        f = self.vector - p
         n = norm(f)
-        if n == 0: return s.o*0
+        if n == 0: return self.vector*0
         direction = 1
         if n < radius:
             direction = -0.5
         return direction * f * (1 - radius/n)
 
-        #f = p-s.o
-        #if norm(f) == 0: return s.o*0
-        #m = s.o + (f*norm(s.n))/norm(f)
-        #return p-m
-
-    def is_inverted(s, p):
+    def is_inverted(self, p):
         """ true if p is in the circle"""
-        return norm(s.o-p) <= norm(s.n)
+        return norm(self.vector - p) <= self.scalar
 
-    def plt(s, ax):
-        radius = norm(s.n)
-        ax.add_patch(plt.Circle(s.p, radius))
+    def plt(self, ax):
+        radius = self.scalar
+        ax.add_patch(plt.Circle(self.vector, radius))
 
 class Line2(Obj):
-    def distance(s, p):
-        n = s.n/norm(s.n)
-        return n * dot((s.o-p), n)
+    def distance(self, p):
+        n = self.vector/norm(self.vector)
+        v = n * self.scalar
+        return n * dot( (v - p), n)
 
-    def is_inverted(s, p):
+    def is_inverted(self, p):
         """ true if p is on wrong side of line"""
         ##TODO, this can be a lot simpler. I think.
-        d = s.distance(p)
+        d = self.distance(p)
         d = d/norm(d)
-        n = s.n/norm(s.n)
+        n = self.vector/norm(self.vector)
         return  norm(d+n) > norm(d)
 
-    def plt(s, ax):
+    def f(self, x):
+        a,b = self.vector
+        c,d = self.vector/norm(self.vector) * self.scalar
+        return (-a/float(b))*(x-c) + d
+
+    def plt(self, ax):
         xmin, xmax = ax.get_xbound()
-        ymin = s.o[1] - (s.n[0]/s.n[1])*(xmin-s.o[0])
-        ymax = s.o[1] - (s.n[0]/s.n[1])*(xmax-s.o[0])
-        ax.add_line(matplotlib.lines.Line2D([xmin,xmax], [ymin, ymax], linewidth=2, color='blue'))
+        ax.add_line(matplotlib.lines.Line2D([xmin,xmax], [self.f(xmin), self.f(xmax)], linewidth=2, color='blue'))
 
 def err_vect(v, n):
     """give the error vector given vector v and len l"""
@@ -81,7 +82,7 @@ def starting_point(objects):
     return avg(circles)
 
 def sign(p, objects): #only circles! DIM
-    obj = list(map(lambda o: p-o.o, objects))
+    obj = list(map(lambda o: p-o.vector, objects))
     first = obj[0]
     obj = map(lambda o: dot(first, o), obj[1:])
     return sum(obj)
@@ -101,7 +102,7 @@ def in_volume(p, objects): #
 
 
 
-def find_inscribed(objects, ax):
+def find_inscribed(objects):
     P = starting_point(objects)
     for i in range(MAX_TRIES): #just an upper bound, real condition is e
         f = [obj.distance(P) for obj in objects]   # Distance between P and objects
@@ -115,7 +116,7 @@ def find_inscribed(objects, ax):
     #success = all(map(lambda c: not c.is_inverted(P), objects))
     circles = [o for o in objects if type(o) is Circle]
     success = 1
-    success &= all(map(lambda c: norm(c.n) > r, circles))
+    success &= all(map(lambda c: c.scalar > r, circles))
     #also P must be inside polygon spanned by objects
     if len(circles) == DIM+1:
         success &= in_volume(P, circles)
@@ -123,38 +124,41 @@ def find_inscribed(objects, ax):
 
 if DIM == 2:
     print("$fn=40;")
-    L1 = Line2(array([-5,  0]), array([ 2, -1]))
-    L2 = Line2(array([ 9,  0]), array([-1, -1]))
-    L3 = Line2(array([ 0, -9]), array([ 0,  1]))
+    L1 = Line2(array([-5,  4]), 0)
+    L2 = Line2(array([ 9,  1]), 9)
+    L3 = Line2(array([ 0, -9]), 9)
     queue = [[L1, L2, L3]]
+    fig = plt.figure(1)
+    plt.axis([-10, 20, -10, 10])
+    ax = fig.add_subplot(1,1,1)
+    [obj.plt(ax) for obj in queue[0]]
 elif DIM == 3:
     print("$fn=40;")
-    L1 = Line2(array([-5,  0, 0]), array([ 2, -1, 1]))
-    L2 = Line2(array([ 9,  0, 0]), array([-1, -1, 1]))
-    L3 = Line2(array([ 0, -9, 0]), array([ 0,  1, 1]))
-    L4 = Line2(array([ 0, 0, 9]), array([ 0,  0, -1]))
+    L1 = Line2(array([-1,  1,  1]), 1)
+    L2 = Line2(array([ 1,  1,  1]), 1)
+    L3 = Line2(array([ 0, -1,  1]), 1)
+    L4 = Line2(array([ 0,  0, -1]), 10)
     queue = [[L1, L2, L3, L4]]
 else:
     print("unsupported DIM")
     import sys
     sys.exit(1)
 
-fig = plt.figure(1)
-plt.axis([-10, 20, -10, 10])
-ax = fig.add_subplot(1,1,1)
-[obj.plt(ax) for obj in queue[0]]
 vol = 0
 for i in range(MAX_OBJECTS):
     if not queue: break
     objects = queue.pop(0)
 
-    P, r, success = find_inscribed(objects, ax)
+    P, r, success = find_inscribed(objects)
     if not success:
         #print("result in other circle, aborting")
-        p = plt.Circle(P, r, fill=False, color="red")
-        ax.add_patch(p)
+        if DIM == 2:
+            p = plt.Circle(P, r, fill=False, color="red")
+            ax.add_patch(p)
         continue
-    C = Circle(P, array([r, 0]))
+    # TODO find intersectionpoints between P and all objects and add to cache
+
+    C = Circle(P, r)
     if DIM == 2:
         print("translate([%f, %f, 0]) circle(%f);" %(P[0], P[1], r*1.01))
     elif DIM == 3:
@@ -163,8 +167,9 @@ for i in range(MAX_OBJECTS):
         obj = objects[:]
         obj[idx] = C
         queue.append(obj)
-    p = plt.Circle(P, r, fill=False, color=".6")
-    ax.add_patch(p)
+    if DIM == 2:
+        p = plt.Circle(P, r, fill=False, color=".6")
+        ax.add_patch(p)
     vol += math.pi * r**2
     #if i%100 == 0:
         #print(i)
