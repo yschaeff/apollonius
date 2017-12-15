@@ -48,7 +48,15 @@ def boundingbox(vertices):
     BB = [(min(c), max(c)) for c in BB]
     return BB
 
-EPSILON = .01
+def initial_probes(BB, initial_spheres):
+    for x in arange(BB[0][0], BB[0][1], EPSILON):
+        for y in arange(BB[1][0], BB[1][1], EPSILON):
+            c = Circle(array([x, y]), None)
+            c.update_radius(initial_spheres)
+            if c.r <= 0: continue
+            yield c
+
+EPSILON = .1
 DIM = 2
 vertices = [array([0,0]), array([10,0]), array([0, 10])]
 faces = [(0, 1), (1, 2), (2, 0)] #right hand rule
@@ -62,16 +70,12 @@ for face in faces:
     C = find_inscribed(p0, p1, p2)
     initial_spheres.append(C)
 
-cand = []
 BB = boundingbox(vertices)
-for x in arange(BB[0][0], BB[0][1], EPSILON):
-    for y in arange(BB[1][0], BB[1][1], EPSILON):
-        cand.append(Circle(array([x, y]), None))
-
+init = initial_probes(BB, initial_spheres)
 print("$fs=.1;")
 print("$fa=1;")
 
-[c.update_radius(initial_spheres) for c in cand]
+cand = list(init)
 cand.sort(reverse=True)
 while len(cand) > 0:
     w = cand.pop(0)
