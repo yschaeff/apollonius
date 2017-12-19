@@ -6,9 +6,9 @@ from numpy import array, dot
 from numpy.linalg import norm
 
 DIM = 3
-MAX_OBJECTS = 30
+MAX_OBJECTS = 500
 MAX_ERROR = 0.00001
-MAX_TRIES = 1000
+MAX_TRIES = 1000 #per object
 
 class Obj:
     def __init__(self, vector, scalar):
@@ -19,7 +19,7 @@ class Obj:
     #def intersect(s, circle):
         #return s.distance(circle.o) + circle.o
     def __repr__(self):
-        return "origin={0}, normal={1}".format(self.o, self.n)
+        return "vector={0}, scalar={1}".format(self.vector, self.scalar)
 
 class Circle(Obj):
     def distance(self, p): ## returns vector with direction and amplitude
@@ -39,6 +39,9 @@ class Circle(Obj):
     def plt(self, ax):
         radius = self.scalar
         ax.add_patch(plt.Circle(self.vector, radius))
+
+    def overlaps(self, c):
+        return norm(self.vector-c.vector)+10000*MAX_ERROR < self.scalar + c.scalar
 
 class Line2(Obj):
     def distance(self, p):
@@ -118,8 +121,9 @@ def find_inscribed(objects):
     success = 1
     success &= all(map(lambda c: c.scalar > r, circles))
     #also P must be inside polygon spanned by objects
-    if len(circles) == DIM+1:
-        success &= in_volume(P, circles)
+    #if len(circles) == len(objects):
+    #if len(circles) == DIM+1:
+        #success &= in_volume(P, circles)
     return P, r, success
 
 if DIM == 2:
@@ -133,7 +137,7 @@ if DIM == 2:
     ax = fig.add_subplot(1,1,1)
     [obj.plt(ax) for obj in queue[0]]
 elif DIM == 3:
-    print("$fn=40;")
+    print("$fn=20;")
     L1 = Line2(array([-1,  1,  1]), 1)
     L2 = Line2(array([ 1,  1,  1]), 1)
     L3 = Line2(array([ 0, -1,  1]), 1)
@@ -145,6 +149,7 @@ else:
     sys.exit(1)
 
 vol = 0
+db = []
 for i in range(MAX_OBJECTS):
     if not queue: break
     objects = queue.pop(0)
@@ -158,13 +163,50 @@ for i in range(MAX_OBJECTS):
         continue
     # TODO find intersectionpoints between P and all objects and add to cache
 
+    ## 1) minimize radius
+    #ic = filter(lambda o: o.overlaps(Circle(P, r)), db)
+    #m = map(lambda o: abs(norm(o.vector - P)-o.scalar), ic)
+    #m = list(m)
+    #if m:
+        #r = min(m)
+    ##1a) minimize less
+    ic = filter(lambda o: o.overlaps(Circle(P, r)), db)
+    for c in ic:
+        if c.overlaps(Circle(P, r)):
+            #TODO, this fails if we are IN c
+            if not c.is_inverted(P):
+                d = c.distance(P)
+                e = r - norm(d)
+                P = P - (d/norm(d))*(e/2)
+                r = r - (e/2)
+            else:
+                d = c.distance(P)
+                d = d/norm(d) * (norm(d)+r)
+                e = norm(d) - r
+                P = P + (d/norm(d))*(e/2)
+                r = r + (e/2)
+
+    # 2) skip
+    #if any(map(lambda o: o.overlaps(Circle(P, r)), db)):
+        #continue
+    ## 3) reiterate
+    #ic = list(filter(lambda o: o.overlaps(Circle(P, r*.9)), db))
+    #if ic:
+        #objects+=ic
+        #queue.insert(0, objects)
+        #continue
+        #print("fail")
+        #continue
+    #print("succ")
+
     C = Circle(P, r)
+    db.append(C)
     if DIM == 2:
         print("translate([%f, %f, 0]) circle(%f);" %(P[0], P[1], r*1.01))
     elif DIM == 3:
-        print("translate([%f, %f, %f]) sphere(%f);" %(P[0], P[1], P[2], r*1.01))
-    for idx, o in enumerate(objects):
-        obj = objects[:]
+        print("translate([%f, %f, %f]) sphere(%f);" %(P[0], P[1], P[2], r*1.00))
+    for idx, o in enumerate(objects[:DIM+1]):
+        obj = objects[:DIM+1]
         obj[idx] = C
         queue.append(obj)
     if DIM == 2:
