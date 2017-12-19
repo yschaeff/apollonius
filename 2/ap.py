@@ -1,7 +1,8 @@
-from numpy import array, dot, matrix, ravel, arange
+from numpy import array, dot, matrix, ravel, arange, mgrid
 from numpy.linalg import norm, det
+from math import ceil
 
-EPSILON = 1
+EPSILON = .05
 DIM = 2
 RADIUS_EXTRA = EPSILON/2
 DIFFERENCE = False
@@ -32,7 +33,13 @@ class Circle:
         for c, p0, p1 in C:
             if self.r and self.r < 0: break
             M = array([[p0[0], p0[1], 1], [p1[0], p1[1], 1], [self.p[0], self.p[1], 1]]).transpose()
-            if det(M) < 0: continue
+            if det(M) < 0:
+                colin =  (c.p[0]*(p0[1]-p1[1]) + p0[0]*(p1[1]-c.p[1]) + p1[0]*(c.p[1]-p1[1]) == 0)
+                if not colin:
+                    continue
+                #if not colin:
+            #if det(M) < 0 and det(M) < -EPSILON:
+                #print(det(M))
             r = norm(self.p - c.p) - c.r
             if  self.r == None or r < self.r:
                 self.r = r
@@ -68,29 +75,40 @@ def boundingbox(vertices):
     BB = [(min(c), max(c)) for c in BB]
     return BB
 
-def intersections(p0, p1, epsilon):
-    p = p1-p0
-    if p[0]:
-        dydx = p[1]/p[0]
-        if p[1] < 0:
-            ys = arange(p[1], step=-epsilon)
-        else:
-            ys = arange(p[1], step=epsilon)
-        return [array((y/dydx, y))+p0 for y in ys]
-    else:
-        if p[1] < 0:
-            ys = arange(p[1], step=-epsilon)
-        else:
-            ys = arange(p[1], step=epsilon)
-        return [array((0, y))+p0 for y in ys]
+def ceilr(x, epsilon):
+    return ceil(x/epsilon) * epsilon
+def floorr(x, epsilon):
+    return (x//epsilon) * epsilon
 
-def initial_probes(BB, initial_spheres, epsilon):
-    for x in arange(BB[0][0], BB[0][1], epsilon):
-        for y in arange(BB[1][0], BB[1][1], epsilon):
-            c = Circle(array([x, y]), None)
-            c.update_radius_init(initial_spheres)
-            if c.r <= 0: continue
-            yield c
+def yrange(start, end, epsilon):
+    if start < end:
+        s = ceilr(start, epsilon)
+        if s == end: return [s]
+        return mgrid[s:end:epsilon]
+    elif start > end:
+        s = floorr(start, epsilon)
+        if s == end: return [s]
+        return mgrid[s:end:-epsilon]
+    else: ## == 
+        if (start % epsilon) == 0: return [start]
+        return []
+
+def intersections(p0, p1, epsilon):
+    ## these are the Y coords of all intersections
+    r = yrange(p0[1], p1[1], epsilon)
+
+    if p0[0] == p1[0]:
+        #print("case 1")
+        p = [array([p0[0], y]) for y in r]
+    else:
+        d = (p1[1] - p0[1]) / (p1[0] - p0[0])
+        if d == 0:
+            #print("case 2a")
+            p = [array([p0[0], y]) for y in r]
+        else:
+            #print("case 2b", d, r)
+            p = [array([(y - p0[1])/d + p0[0], y]) for y in r]
+    return p
 
 def face2sphere(face):
     p0 = vertices[face[0]]
@@ -99,14 +117,23 @@ def face2sphere(face):
     C = find_inscribed(p0, p1, p2)
     return C, p0, p1
 
+ints = {}
 for face in faces:
     p0 = vertices[face[0]]
     p1 = vertices[face[1]]
     i = intersections(p0, p1, EPSILON)
-    print(p0, p1, p1-p0, i)
+    for p in i:
+        x,y = p
+        y = int(y/EPSILON)
+        if y in ints:
+            ints[y] += [x]
+        else:
+            ints[y] = [x]
 
-print("$fs=.1;")
-print("$fa=1;")
+#print(ints)
+
+print("$fs=.01;")
+print("$fa=10;")
 if not DIFFERENCE:
     print("//", end="")
 print("difference()\n{")
@@ -116,10 +143,31 @@ print(a)
 initial_spheres = [face2sphere(face) for face in faces]
 
 for U, p0, p1 in initial_spheres:
+    print("//", end="")
     U.export()
 
 BB = boundingbox(vertices)
-init = initial_probes(BB, initial_spheres, EPSILON)
+init = []
+for y, val in ints.items():
+    if len(val)%2: continue
+    val.sort()
+    #print("y", y, "val", val)
+    inside = False
+    x = BB[0][0]
+    #x = val[0]
+    while len(val):
+        if x >= val[0]:
+            val.pop(0)
+            inside = not inside
+        if inside:
+            ##print(x, end=", ")
+            c = Circle(array([x, y*EPSILON]), None)
+            c.update_radius_init(initial_spheres)
+            if c.r > 0:
+                init.append(c)
+        x += EPSILON
+    #print("")
+#print(init)
 
 cand = list(init)
 cand.sort(reverse=True)
