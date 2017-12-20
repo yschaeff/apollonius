@@ -1,10 +1,12 @@
+import numpy as np
 from numpy import array, dot, matrix, ravel, arange, mgrid
 from numpy.linalg import norm, det
 from collections import namedtuple
 from stl import mesh, Dimension
-from math import ceil
+from math import ceil, sqrt
 
 BB = namedtuple('BoundingBox', "minx miny minz maxx maxy maxz")
+EPSILON = 1
 
 class Sphere:
     def __init__(self, center, radius = None):
@@ -30,14 +32,30 @@ def bounding_box(obj):
 def update_spheres(candidates, winner):
     [candidate.update(winner) for candidate in candidates]
     candidate_spheres.sort(reverse = True)
-    # Remove all inpossible candidates
+    # Remove all impossible candidates
     while candidate_spheres:
         if candidate_spheres[0].valid(): break
         candidate_spheres.pop(0)
 
-def obj2boundingspheres(obj, bb): # -> list of spheres
-    #TODO
-    return []
+def coefficients(Tin, tv, i):
+    S = Tin.copy()
+    S[:,i] = tv
+    return det(S)
+
+def face2sphere(face, normal, epsilon):
+    v_epsilon = (normal/norm(normal)) * epsilon
+    vector4 = sum(face)/3 - v_epsilon
+    vectors = np.vstack([face, vector4])
+    tv =  [-sum(vector**2) for vector in vectors]
+    Tin = np.hstack([vectors, np.ones([4, 1])])
+    T = det(Tin)
+    D, E, F, G = [coefficients(Tin, tv, i)/T for i in range(4)]
+    x, y, z, r = -D/2, -E/2, -F/2, sqrt(D**2+E**2+F**2-4*G)/2
+    return Sphere(array([x, y, z]), r)
+
+def obj2boundingspheres(obj, bb, epsilon): # -> list of spheres
+    faces = zip(obj.vectors, obj.normals)
+    return [face2sphere(face, normal, epsilon) for face, normal in faces]
 
 def obj2spherecloud(obj, bb): # -> list of spheres
     return []
@@ -47,7 +65,7 @@ def initialize_candidates(candidates, winners): # -> None
 
 obj = mesh.Mesh.from_file('cube.stl')
 bb = bounding_box(obj)
-bounding_spheres = obj2boundingspheres(obj, bb)
+bounding_spheres = obj2boundingspheres(obj, bb, EPSILON)
 candidate_spheres = obj2spherecloud(obj, bb)
 initialize_candidates(candidate_spheres, bounding_spheres)
 candidate_spheres.sort(reverse = True)
