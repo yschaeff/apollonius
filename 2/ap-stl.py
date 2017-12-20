@@ -6,7 +6,7 @@ from stl import mesh, Dimension
 from math import ceil, sqrt
 
 BB = namedtuple('BoundingBox', "minx miny minz maxx maxy maxz")
-EPSILON = 1
+EPSILON = .5
 
 class Sphere:
     def __init__(self, center, radius = None):
@@ -15,10 +15,13 @@ class Sphere:
     def valid(self):
         return self.radius > 0
     def update(self, other):
-        distance = norm(self.center - other.center) - other,center
+        distance = norm(self.center - other.center) - other.radius
         if self.radius == None or self.radius > distance:
             self.radius = distance
-
+    def __repr__(self):
+        return "translate([%f, %f, %f]) sphere(r=%f);" % (*self.center, self.radius)
+    def __lt__(self, other):
+        return self.radius < other.radius
 
 def bounding_box(obj):
     minx = min([min([vector[Dimension.X] for vector in face]) for face in obj.vectors])
@@ -43,6 +46,7 @@ def coefficients(Tin, tv, i):
     return det(S)
 
 def face2sphere(face, normal, epsilon):
+    ## from: http://www.ambrsoft.com/TrigoCalc/Sphere/Spher3D_.htm
     v_epsilon = (normal/norm(normal)) * epsilon
     vector4 = sum(face)/3 - v_epsilon
     vectors = np.vstack([face, vector4])
@@ -57,25 +61,47 @@ def obj2boundingspheres(obj, bb, epsilon): # -> list of spheres
     faces = zip(obj.vectors, obj.normals)
     return [face2sphere(face, normal, epsilon) for face, normal in faces]
 
-def obj2spherecloud(obj, bb): # -> list of spheres
-    return []
+def obj2spherecloud(obj, bb, epsilon): # -> list of spheres
+    # naive: bb, enly works because solid== BB
+    cloud = []
+    print("creating {} points".format((bb.maxx-bb.minx) * (bb.maxy-bb.miny) * (bb.maxz-bb.minz)/(epsilon**3)))
+    for x in arange(bb.minx, bb.maxx, epsilon):
+        for y in arange(bb.miny, bb.maxy, epsilon):
+            for z in arange(bb.minz, bb.maxz, epsilon):
+                cloud.append(Sphere(array([x,y,z]), None))
+    return cloud
 
 def initialize_candidates(candidates, winners): # -> None
-    pass
+    for i, candidate in enumerate(candidates):
+        [candidate.update(winner) for winner in winners]
+        #print(i)
+    ## TODO this now only works for convex shapes
 
+print("Importing solid")
 obj = mesh.Mesh.from_file('cube.stl')
+print("Calculating BB")
 bb = bounding_box(obj)
+print("Calculating Bounding Spheres")
 bounding_spheres = obj2boundingspheres(obj, bb, EPSILON)
-candidate_spheres = obj2spherecloud(obj, bb)
+print("Generating Candidates")
+candidate_spheres = obj2spherecloud(obj, bb, EPSILON)
+print("Initializing Candidates")
 initialize_candidates(candidate_spheres, bounding_spheres)
+print("Sorting Candidates")
 candidate_spheres.sort(reverse = True)
 winner_spheres = []
+print("running...")
 while candidate_spheres:
     winner = candidate_spheres.pop(0)
-    if winner.radius < ESPILON: break
-    spheres.append(winner)
+    if winner.radius < EPSILON: break
+    winner_spheres.append(winner)
     update_spheres(candidate_spheres, winner)
+    print(winner)
 
 scad = "\n".join([str(sphere) for sphere in winner_spheres])
-print(scad)
-
+#print(scad)
+#for bbs in bounding_spheres:
+    #print(bbs)
+#print("winners")
+#for bbs in winner_spheres:
+    #print(bbs)
