@@ -4,9 +4,10 @@ from numpy.linalg import norm, det
 from collections import namedtuple
 from stl import mesh, Dimension
 from math import ceil, sqrt
+import sys
 
 BB = namedtuple('BoundingBox', "minx miny minz maxx maxy maxz")
-EPSILON = .5
+EPSILON = .3
 
 class Sphere:
     def __init__(self, center, radius = None):
@@ -18,6 +19,15 @@ class Sphere:
         distance = norm(self.center - other.center) - other.radius
         if self.radius == None or self.radius > distance:
             self.radius = distance
+    def update_all(self, others):
+        if self.radius and self.radius <-0:
+            return
+        for other in others:
+            distance = norm(self.center - other.center) - other.radius
+            if self.radius == None or self.radius > distance:
+                self.radius = distance
+                if self.radius <= 0: #smaller than epsilon perhaps
+                    break;
     def __repr__(self):
         return "translate([%f, %f, %f]) sphere(r=%f);" % (*self.center, self.radius)
     def __lt__(self, other):
@@ -64,7 +74,7 @@ def obj2boundingspheres(obj, bb, epsilon): # -> list of spheres
 def obj2spherecloud(obj, bb, epsilon): # -> list of spheres
     # naive: bb, enly works because solid== BB
     cloud = []
-    print("creating {} points".format((bb.maxx-bb.minx) * (bb.maxy-bb.miny) * (bb.maxz-bb.minz)/(epsilon**3)))
+    print("creating {} points".format((bb.maxx-bb.minx) * (bb.maxy-bb.miny) * (bb.maxz-bb.minz)/(epsilon**3)), file=sys.stderr)
     for x in arange(bb.minx, bb.maxx, epsilon):
         for y in arange(bb.miny, bb.maxy, epsilon):
             for z in arange(bb.minz, bb.maxz, epsilon):
@@ -72,25 +82,38 @@ def obj2spherecloud(obj, bb, epsilon): # -> list of spheres
     return cloud
 
 def initialize_candidates(candidates, winners): # -> None
+    l = len(candidates)
     for i, candidate in enumerate(candidates):
-        [candidate.update(winner) for winner in winners]
+        #[candidate.update(winner) for winner in winners]
+        #for winner in winners:
+            #candidate.update(winner)
+        candidate.update_all(winners)
+        if i%100 == 0:
+            print(100*(i/l), len(winners), file=sys.stderr)
         #print(i)
     ## TODO this now only works for convex shapes
 
-print("Importing solid")
-obj = mesh.Mesh.from_file('cube.stl')
-print("Calculating BB")
+print("$fs=.01;")
+print("$fa=10;")
+
+print("Importing solid", file=sys.stderr)
+#obj = mesh.Mesh.from_file('/home/yuri/repo/3d-models/stl/theepot_deksel2_smooth.stl')
+#obj = mesh.Mesh.from_file('cube.stl')
+#obj = mesh.Mesh.from_file('sphere.stl')
+obj = mesh.Mesh.from_file('trapeziod.stl')
+print("Calculating BB", file=sys.stderr)
 bb = bounding_box(obj)
-print("Calculating Bounding Spheres")
+print(bb, file=sys.stderr)
+print("Calculating Bounding Spheres", file=sys.stderr)
 bounding_spheres = obj2boundingspheres(obj, bb, EPSILON)
-print("Generating Candidates")
+print("Generating Candidates", file=sys.stderr)
 candidate_spheres = obj2spherecloud(obj, bb, EPSILON)
-print("Initializing Candidates")
+print("Initializing Candidates", file=sys.stderr)
 initialize_candidates(candidate_spheres, bounding_spheres)
-print("Sorting Candidates")
+print("Sorting Candidates", file=sys.stderr)
 candidate_spheres.sort(reverse = True)
 winner_spheres = []
-print("running...")
+print("running...", file=sys.stderr)
 while candidate_spheres:
     winner = candidate_spheres.pop(0)
     if winner.radius < EPSILON: break
