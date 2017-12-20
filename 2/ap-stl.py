@@ -20,14 +20,12 @@ class Sphere:
         if self.radius == None or self.radius > distance:
             self.radius = distance
     def update_all(self, others):
-        if self.radius and self.radius <-0:
-            return
+        if self.radius and self.radius <= 0: return
         for other in others:
             distance = norm(self.center - other.center) - other.radius
             if self.radius == None or self.radius > distance:
                 self.radius = distance
-                if self.radius <= 0: #smaller than epsilon perhaps
-                    break;
+                if self.radius <= 0: break;
     def __repr__(self):
         return "translate([%f, %f, %f]) sphere(r=%f);" % (*self.center, self.radius)
     def __lt__(self, other):
@@ -40,6 +38,15 @@ def bounding_box(obj):
     maxx = max([max([vector[Dimension.X] for vector in face]) for face in obj.vectors])
     maxy = max([max([vector[Dimension.Y] for vector in face]) for face in obj.vectors])
     maxz = max([max([vector[Dimension.Z] for vector in face]) for face in obj.vectors])
+    return BB(minx, miny, minz, maxx, maxy, maxz)
+
+def bounding_box_epsilon(point, epsilon):
+    minx = point[0] - epsilon
+    miny = point[1] - epsilon
+    minz = point[2] - epsilon
+    maxx = point[0] + epsilon
+    maxy = point[1] + epsilon
+    maxz = point[2] + epsilon
     return BB(minx, miny, minz, maxx, maxy, maxz)
 
 def update_spheres(candidates, winner):
@@ -117,6 +124,17 @@ print("running...", file=sys.stderr)
 while candidate_spheres:
     winner = candidate_spheres.pop(0)
     if winner.radius < EPSILON: break
+
+    ## start wiggling!
+    bb_winner_center = bounding_box_epsilon(winner.center, EPSILON/2)
+    candidate_winners = obj2spherecloud(obj, bb_winner_center, EPSILON/2)
+    initialize_candidates(candidate_winners, bounding_spheres)
+    initialize_candidates(candidate_winners, winner_spheres)
+    candidate_winners.sort(reverse = True)
+    winner = candidate_spheres.pop(0)
+    ## end wiggle
+
+
     winner_spheres.append(winner)
     update_spheres(candidate_spheres, winner)
     print(winner)
