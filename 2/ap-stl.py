@@ -7,8 +7,11 @@ from math import ceil, sqrt
 import sys
 
 BB = namedtuple('BoundingBox', "minx miny minz maxx maxy maxz")
-START_EPSILON = .5
+START_EPSILON = 1
 END_EPSILON = .5
+FACE_EPSILON = END_EPSILON/10
+
+CHECK_CONVEXITY = True
 
 class Sphere:
     def __init__(self, center, radius = None):
@@ -23,6 +26,12 @@ class Sphere:
     def update_all(self, others):
         if self.radius and self.radius <= 0: return
         for other in others:
+            if CHECK_CONVEXITY and type(other) == BoundingSphere:
+                ## on wrong side of face?: skip
+                Tin = np.vstack([other.face, self.center])
+                Tin = np.hstack([Tin, np.ones([4, 1])])
+                T = det(Tin)
+                if T<0: continue
             distance = norm(self.center - other.center) - other.radius
             if self.radius == None or self.radius > distance:
                 self.radius = distance
@@ -31,6 +40,13 @@ class Sphere:
         return "translate([%f, %f, %f]) sphere(r=%f);" % (*self.center, self.radius)
     def __lt__(self, other):
         return self.radius < other.radius
+
+class BoundingSphere(Sphere):
+    def __init__(self, center, radius, face):
+            Sphere.__init__(self, center, radius)
+            self.face = face
+    def __repr__(self):
+        return "//" + Sphere.__repr__(self)
 
 def bounding_box(obj):
     minx = min([min([vector[Dimension.X] for vector in face]) for face in obj.vectors])
@@ -73,7 +89,7 @@ def face2sphere(face, normal, epsilon):
     T = det(Tin)
     D, E, F, G = [coefficients(Tin, tv, i)/T for i in range(4)]
     x, y, z, r = -D/2, -E/2, -F/2, sqrt(D**2+E**2+F**2-4*G)/2
-    return Sphere(array([x, y, z]), r)
+    return BoundingSphere(array([x, y, z]), r, face)
 
 def obj2boundingspheres(obj, bb, epsilon): # -> list of spheres
     faces = zip(obj.vectors, obj.normals)
@@ -97,28 +113,27 @@ def initialize_candidates(candidates, winners): # -> None
 print("$fs=.01;")
 print("$fa=10;")
 
-print("Importing solid", file=sys.stderr)
+#print("Importing solid", file=sys.stderr)
 #obj = mesh.Mesh.from_file('/home/yuri/repo/3d-models/stl/theepot_deksel2_smooth.stl')
-obj = mesh.Mesh.from_file('cube.stl')
+obj = mesh.Mesh.from_file('concave.stl')
+#obj = mesh.Mesh.from_file('cube.stl')
 #obj = mesh.Mesh.from_file('sphere.stl')
 #obj = mesh.Mesh.from_file('trapeziod.stl')
-print("Calculating BB", file=sys.stderr)
+#print("Calculating BB", file=sys.stderr)
 bb = bounding_box(obj)
 print(bb, file=sys.stderr)
-print("Calculating Bounding Spheres", file=sys.stderr)
-bounding_spheres = obj2boundingspheres(obj, bb, END_EPSILON)
-winner_spheres = []
+#print("Calculating Bounding Spheres", file=sys.stderr)
+winner_spheres= obj2boundingspheres(obj, bb, FACE_EPSILON)
 
 epsilon = START_EPSILON
 while epsilon >= END_EPSILON:
-    print("Generating Candidates", file=sys.stderr)
+    #print("Generating Candidates", file=sys.stderr)
     candidate_spheres = obj2spherecloud(obj, bb, epsilon)
-    print("Initializing Candidates", file=sys.stderr)
-    initialize_candidates(candidate_spheres, bounding_spheres)
+    #print("Initializing Candidates", file=sys.stderr)
     initialize_candidates(candidate_spheres, winner_spheres)
-    print("Sorting Candidates", file=sys.stderr)
+    #print("Sorting Candidates", file=sys.stderr)
     candidate_spheres.sort(reverse = True)
-    print("running...", file=sys.stderr)
+    print("running... epsilon:", epsilon, file=sys.stderr)
     while candidate_spheres:
         winner = candidate_spheres.pop(0)
         if winner.radius < epsilon: break
@@ -128,8 +143,8 @@ while epsilon >= END_EPSILON:
         while e >= END_EPSILON:
             bb_winner_center = bounding_box_epsilon(winner.center, e)
             candidate_winners = obj2spherecloud(obj, bb_winner_center, e/4)
-            initialize_candidates(candidate_winners, bounding_spheres)
             initialize_candidates(candidate_winners, winner_spheres)
+            ## TODO eliminate candidates not in solid
             winner = max(candidate_winners)
             e /= 2
         ## Don't stop move it baby. Wiggle! Wiggle!
