@@ -7,7 +7,8 @@ from math import ceil, sqrt
 import sys
 
 BB = namedtuple('BoundingBox', "minx miny minz maxx maxy maxz")
-EPSILON = .3
+START_EPSILON = .5
+END_EPSILON = .5
 
 class Sphere:
     def __init__(self, center, radius = None):
@@ -81,7 +82,7 @@ def obj2boundingspheres(obj, bb, epsilon): # -> list of spheres
 def obj2spherecloud(obj, bb, epsilon): # -> list of spheres
     # naive: bb, enly works because solid== BB
     cloud = []
-    print("creating {} points".format((bb.maxx-bb.minx) * (bb.maxy-bb.miny) * (bb.maxz-bb.minz)/(epsilon**3)), file=sys.stderr)
+    #print("creating {} points".format((bb.maxx-bb.minx) * (bb.maxy-bb.miny) * (bb.maxz-bb.minz)/(epsilon**3)), file=sys.stderr)
     for x in arange(bb.minx, bb.maxx, epsilon):
         for y in arange(bb.miny, bb.maxy, epsilon):
             for z in arange(bb.minz, bb.maxz, epsilon):
@@ -89,15 +90,8 @@ def obj2spherecloud(obj, bb, epsilon): # -> list of spheres
     return cloud
 
 def initialize_candidates(candidates, winners): # -> None
-    l = len(candidates)
-    for i, candidate in enumerate(candidates):
-        #[candidate.update(winner) for winner in winners]
-        #for winner in winners:
-            #candidate.update(winner)
+    for candidate in candidates:
         candidate.update_all(winners)
-        if i%100 == 0:
-            print(100*(i/l), len(winners), file=sys.stderr)
-        #print(i)
     ## TODO this now only works for convex shapes
 
 print("$fs=.01;")
@@ -105,39 +99,45 @@ print("$fa=10;")
 
 print("Importing solid", file=sys.stderr)
 #obj = mesh.Mesh.from_file('/home/yuri/repo/3d-models/stl/theepot_deksel2_smooth.stl')
-#obj = mesh.Mesh.from_file('cube.stl')
+obj = mesh.Mesh.from_file('cube.stl')
 #obj = mesh.Mesh.from_file('sphere.stl')
-obj = mesh.Mesh.from_file('trapeziod.stl')
+#obj = mesh.Mesh.from_file('trapeziod.stl')
 print("Calculating BB", file=sys.stderr)
 bb = bounding_box(obj)
 print(bb, file=sys.stderr)
 print("Calculating Bounding Spheres", file=sys.stderr)
-bounding_spheres = obj2boundingspheres(obj, bb, EPSILON)
-print("Generating Candidates", file=sys.stderr)
-candidate_spheres = obj2spherecloud(obj, bb, EPSILON)
-print("Initializing Candidates", file=sys.stderr)
-initialize_candidates(candidate_spheres, bounding_spheres)
-print("Sorting Candidates", file=sys.stderr)
-candidate_spheres.sort(reverse = True)
+bounding_spheres = obj2boundingspheres(obj, bb, END_EPSILON)
 winner_spheres = []
-print("running...", file=sys.stderr)
-while candidate_spheres:
-    winner = candidate_spheres.pop(0)
-    if winner.radius < EPSILON: break
 
-    ## start wiggling!
-    bb_winner_center = bounding_box_epsilon(winner.center, EPSILON/2)
-    candidate_winners = obj2spherecloud(obj, bb_winner_center, EPSILON/2)
-    initialize_candidates(candidate_winners, bounding_spheres)
-    initialize_candidates(candidate_winners, winner_spheres)
-    candidate_winners.sort(reverse = True)
-    winner = candidate_spheres.pop(0)
-    ## end wiggle
+epsilon = START_EPSILON
+while epsilon >= END_EPSILON:
+    print("Generating Candidates", file=sys.stderr)
+    candidate_spheres = obj2spherecloud(obj, bb, epsilon)
+    print("Initializing Candidates", file=sys.stderr)
+    initialize_candidates(candidate_spheres, bounding_spheres)
+    initialize_candidates(candidate_spheres, winner_spheres)
+    print("Sorting Candidates", file=sys.stderr)
+    candidate_spheres.sort(reverse = True)
+    print("running...", file=sys.stderr)
+    while candidate_spheres:
+        winner = candidate_spheres.pop(0)
+        if winner.radius < epsilon: break
 
+        ## Don't stop move it baby. Wiggle! Wiggle!
+        e = epsilon
+        while e >= END_EPSILON:
+            bb_winner_center = bounding_box_epsilon(winner.center, e)
+            candidate_winners = obj2spherecloud(obj, bb_winner_center, e/4)
+            initialize_candidates(candidate_winners, bounding_spheres)
+            initialize_candidates(candidate_winners, winner_spheres)
+            winner = max(candidate_winners)
+            e /= 2
+        ## Don't stop move it baby. Wiggle! Wiggle!
 
-    winner_spheres.append(winner)
-    update_spheres(candidate_spheres, winner)
-    print(winner)
+        winner_spheres.append(winner)
+        update_spheres(candidate_spheres, winner)
+        print(winner)
+    epsilon /= 2
 
 scad = "\n".join([str(sphere) for sphere in winner_spheres])
 #print(scad)
