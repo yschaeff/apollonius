@@ -53,21 +53,6 @@ def bb(vertices):
     f_max = np.max(vertices, 0)
     return f_min, f_max
 
-#class Octree:
-    #def __init__(self, bb):
-        #self.bb = bb[:, 1:]
-        #self.boxes = []
-        #self.left = None
-        #self.right = None
-    #def inside(self, bb):
-        #if any((bb < self.bb[0])) and any((bb > self.bb[1])):
-            #return False
-        #return True
-    #def insert(self, bb, squash=True):
-        #if not self.left:
-            #self.left = Octree((self.bb[0], self.bb[1]/2))
-            #self.right = Octree((self.bb[1]/2, self.bb[1]))
-
 def face_to_triangle(face):
     return face[:, 1:]
 
@@ -109,18 +94,6 @@ def discretize_triangle(triangle, E):
         X = erange(x0, x1, E)
         for x in X:
             yield x,y
-
-#def intersect_face_line(face, normal, line):
-    #p0, p1 = line
-    #Intersection = namedtuple("Intersection", "point, normal, on_edge")
-    #intersections = []
-    #for (normal, vertices, _), box in zip(self.solid.data, self.boxes):
-
-        #p, in_triangle, on_edge = line_triangle_intersection(line, vertices, normal)
-        #if not in_triangle:
-            #continue
-        #intersections.append(Intersection(p, normal, on_edge))
-    #return intersections
 
 def ranges(intersections):
     # two adjecent intersections with normal in same direction are merged
@@ -211,7 +184,7 @@ class Solid:
         return ranges(intersections)
 
 
-    def discretize2(self, E):
+    def discretize(self, E):
         """ discretize solid. returns list of points. """
         Intersection = namedtuple("Intersection", "point, normal, on_edge")
         #For every face generate intersections
@@ -236,7 +209,7 @@ class Solid:
                 for x in X:
                     yield np.array([x*E, y*E, z*E])
 
-    def discretize(self, E):
+    def discretize_linear(self, E):
         """ discretize solid. returns list of points. """
         #z = 0
         for y in np.arange(self.min[stl.Dimension.Y], self.max[stl.Dimension.Y], E):
@@ -259,12 +232,3 @@ class Solid:
                     if self.point_inside(point):
                         yield point
 
-
-#stl_path = '../2/concave.stl'
-#solid = Solid(stl_path)
-#point = np.array([10, 5, 5])
-##inside = solid.point_inside(point)
-##print("point %s in solid: %d"%(str(point), inside))
-##points = solid.discretize(.5)
-#points = solid.discretize(.1)
-#print(list(points))
