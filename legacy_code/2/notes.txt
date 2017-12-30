@@ -1,0 +1,20 @@
+
+def line_plane_intersection(line, plane):
+    """
+        Find intersection point of a line and a plane
+        line: defined as two points on that line. (p0, p1)
+        plane: defined as point on plane and normal (v0, n)
+        http://geomalgorithms.com/a05-_intersect-1.html
+    """
+    p0, p1 = line
+    v0, n = plane
+
+    u = p1 - p0 #vector in direction of line
+    if np.dot(u, n) == 0:
+        ## if parallel there is no intersection
+        return None
+    w = p0 - v0
+    si = (-np.dot(n, w)) / np.dot(n, u)
+    p = p0 + si*u
+    return p
+
