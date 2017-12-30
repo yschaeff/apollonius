@@ -7,11 +7,18 @@ from math import ceil, sqrt
 import sys
 
 BB = namedtuple('BoundingBox', "minx miny minz maxx maxy maxz")
-START_EPSILON = 1
+START_EPSILON = 8
 END_EPSILON = .5
 FACE_EPSILON = END_EPSILON/10
 
 CHECK_CONVEXITY = True
+#CHECK_CONVEXITY = False
+
+#obj_path = '/home/yuri/repo/3d-models/stl/theepot_deksel2_smooth.stl'
+obj_path = 'concave.stl'
+obj_path = 'cube.stl'
+#obj_path = 'sphere.stl'
+#obj_path = 'trapeziod.stl'
 
 class Sphere:
     def __init__(self, center, radius = None):
@@ -37,7 +44,7 @@ class Sphere:
                 self.radius = distance
                 if self.radius <= 0: break;
     def __repr__(self):
-        return "translate([%f, %f, %f]) sphere(r=%f);" % (*self.center, self.radius)
+        return "translate([%f, %f, %f]) sphere(r=%f, $fn=5);" % (*self.center, self.radius)
     def __lt__(self, other):
         return self.radius < other.radius
 
@@ -113,13 +120,7 @@ def initialize_candidates(candidates, winners): # -> None
 print("$fs=.01;")
 print("$fa=10;")
 
-#print("Importing solid", file=sys.stderr)
-#obj = mesh.Mesh.from_file('/home/yuri/repo/3d-models/stl/theepot_deksel2_smooth.stl')
-obj = mesh.Mesh.from_file('concave.stl')
-#obj = mesh.Mesh.from_file('cube.stl')
-#obj = mesh.Mesh.from_file('sphere.stl')
-#obj = mesh.Mesh.from_file('trapeziod.stl')
-#print("Calculating BB", file=sys.stderr)
+obj = mesh.Mesh.from_file(obj_path)
 bb = bounding_box(obj)
 print(bb, file=sys.stderr)
 #print("Calculating Bounding Spheres", file=sys.stderr)
@@ -151,13 +152,8 @@ while epsilon >= END_EPSILON:
 
         winner_spheres.append(winner)
         update_spheres(candidate_spheres, winner)
-        print(winner)
+        #print(winner)
     epsilon /= 2
 
 scad = "\n".join([str(sphere) for sphere in winner_spheres])
-#print(scad)
-#for bbs in bounding_spheres:
-    #print(bbs)
-#print("winners")
-#for bbs in winner_spheres:
-    #print(bbs)
+print(scad)
