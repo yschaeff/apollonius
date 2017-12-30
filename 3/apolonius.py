@@ -1,18 +1,35 @@
 import stl3d, spheres, scad_writer, stl_writer
 import sys
+import argparse
 
-stl_path = sys.argv[1]
-E = float(sys.argv[2])
-scad_path = sys.argv[3]
+parser = argparse.ArgumentParser()
+parser.add_argument("input", help="Base STL file", action="store")
+parser.add_argument("output", help="file to write STL or SCAD", action="store")
+parser.add_argument("-s", "--openscad", help="output OpenSCAD file instead of STL", action="store_true")
+parser.add_argument("-e", "--epsilon", help="resolution", action="store", type=float)
+parser.add_argument("-u", "--unit", help="voxel STL", action="store")
+args = parser.parse_args()
+
+if not args.unit:
+    args.unit = "unit_sphere.stl"
 
 print("importing")
-solid = stl3d.Solid(stl_path)
+solid = stl3d.Solid(args.input)
 #print(solid.boundingbox())
+
+if not args.epsilon:
+    ## todo base on solid volume/BB
+    args.epsilon = 1
+
 print("dicing")
-points = solid.discretize(E)
+points = solid.discretize(args.epsilon)
+
 print("sphering")
-cspheres = [spheres.Sphere(point, radius=E/2) for point in points]
+cspheres = [spheres.Sphere(point, radius=args.epsilon/2) for point in points]
+
 print("writing")
-scad_writer.write(cspheres, scad_path, stl_path, E)
-sprite = sys.argv[4]
-stl_writer.write(cspheres, scad_path, stl_path, sprite, E)
+if args.openscad:
+    scad_writer.write(cspheres, args.output, args.input, args.epsilon)
+else:
+    stl_writer.write(cspheres, args.output, args.input, args.unit, args.epsilon)
+
