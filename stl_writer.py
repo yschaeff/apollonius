@@ -13,6 +13,10 @@ def sphere2mesh(sphere, sprite, E):
 
 def write(spheres, outfile, infile, spritefile, E):
     sprite = stl.mesh.Mesh.from_file(spritefile)
-    sprites = [sphere2mesh(sphere, sprite, E) for sphere in spheres]
+    sprites = [sphere2mesh(sphere, sprite, E) for sphere in spheres if not sphere.bounding()]
+    if not sprites:
+        print("No samples found")
+        return True
     combined = stl.mesh.Mesh(np.concatenate([sprite.data for sprite in sprites]))
     combined.save(outfile, mode=stl.Mode.ASCII)  # save as ASCII
+    return False

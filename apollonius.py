@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import stl3d, spheres, scad_writer, stl_writer
-import sys, argparse
+import stl3d, spheres, scad_writer, stl_writer, apolloniator
+import sys, argparse, math
 import numpy as np
 
 parser = argparse.ArgumentParser()
@@ -20,9 +20,10 @@ print("importing")
 solid = stl3d.Solid(args.input)
 
 if not args.epsilon:
+    ## about 1000 spheres
     p0, p1 = solid.boundingbox()
     prod = np.prod(p1-p0)
-    args.epsilon = prod / 4000
+    args.epsilon = math.pow(prod, 1/3) / 10
     print("Using epsilon {}".format(args.epsilon))
 
 print("dicing")
@@ -32,13 +33,12 @@ if args.raster:
     print("sphering")
     cspheres = [spheres.Sphere(point, radius=args.epsilon/2) for point in points]
 else:
-    print("NOT IMPL")
-    cspheres = []
-    sys.exit(1)
+    cspheres = apolloniator.apolloniate(solid, points, args.epsilon)
 
 print("writing")
 if args.openscad:
-    scad_writer.write(cspheres, args.output, args.input, args.epsilon)
+    r = scad_writer.write(cspheres, args.output, args.input, args.epsilon)
 else:
-    stl_writer.write(cspheres, args.output, args.input, args.unit, args.epsilon)
+    r = stl_writer.write(cspheres, args.output, args.input, args.unit, args.epsilon)
 
+sys.exit(r)

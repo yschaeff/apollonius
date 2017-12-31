@@ -10,7 +10,7 @@ class Sphere:
         self.dead = False
 
     def bounding(self):
-        return self.face != None
+        return self.face is not None
 
     def shrink(self, others):
         for other in others:
