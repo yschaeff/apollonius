@@ -12,19 +12,28 @@ class Sphere:
     def bounding(self):
         return self.face is not None
 
-    def shrink(self, others):
+    def shrink_bounding(self, others):
         for other in others:
-            if self.dead: return
-            if other.bounding():
-                Tin = np.vstack([other.face, self.center])
-                Tin = np.hstack([Tin, np.ones([4, 1])])
-                if np.linalg.det(Tin) < 0: continue
             distance = np.linalg.norm(self.center - other.center) - other.radius
+            if distance >= self.radius: continue
+            Tin = np.vstack([other.face, self.center])
+            Tin = np.hstack([Tin, np.ones([4, 1])])
+            if np.linalg.det(Tin) < 0: continue
             if distance <= 0:
                 self.dead = True
-                break
-            if self.radius > distance:
+                return
+            elif self.radius > distance:
                 self.radius = distance
+
+    def shrink(self, other):
+        if self.dead: return
+        distance = np.linalg.norm(self.center - other.center) - other.radius
+        if distance >= self.radius: return
+        if distance <= 0:
+            self.dead = True
+            return
+        if self.radius > distance:
+            self.radius = distance
 
     def __repr__(self):
         return "{SPHERE: " + str((self.center, self.radius, self.face, self.dead)) +"}"

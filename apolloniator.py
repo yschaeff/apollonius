@@ -25,9 +25,13 @@ def solid2spheres(solid, epsilon): # -> list of spheres
 def apolloniate(solid, points, E):
     winners = solid2spheres(solid.solid, E/100)
     candidates = [spheres.Sphere(point) for point in points]
+
+    n = len(candidates)
+    w = len(winners)
+    print(n, w)
     
     for candidate in candidates:
-        candidate.shrink(winners)
+        candidate.shrink_bounding(winners)
     while candidates:
         candidates.sort()
         c = candidates.pop()
@@ -36,7 +40,7 @@ def apolloniate(solid, points, E):
         if c.radius < E:
             break
         for loser in candidates:
-            loser.shrink([c])
+            loser.shrink(c)
         winners.append(c)
 
 
