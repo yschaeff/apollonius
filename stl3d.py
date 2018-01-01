@@ -84,6 +84,8 @@ def discretize_triangle(triangle, E):
     slices = defaultdict(set)
     for edge in triangle_to_edges(triangle):
         p0, p1 = edge
+        if p0[stl.Dimension.Y] == p1[stl.Dimension.Y]:
+            continue
         Y = erange(p0[stl.Dimension.Y], p1[stl.Dimension.Y], E)
         for y in Y:
             x = intersect_linesegment(p0, p1, y*E)

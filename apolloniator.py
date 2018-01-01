@@ -19,13 +19,25 @@ def face2sphere(face, normal, epsilon):
     x, y, z, r = -D/2, -E/2, -F/2, math.sqrt(D**2+E**2+F**2-4*G)/2
     return spheres.Sphere(np.array([x, y, z]), r, face)
 
-
 def solid2spheres(solid, epsilon): # -> list of spheres
     return [face2sphere(face, normal, epsilon) for normal, face, _ in solid.data]
 
 def apolloniate(solid, points, E):
-    spheres = solid2spheres(solid.solid, E/100)
-    print(len(spheres))
+    winners = solid2spheres(solid.solid, E/100)
+    candidates = [spheres.Sphere(point) for point in points]
+    
+    for candidate in candidates:
+        candidate.shrink(winners)
+    while candidates:
+        candidates.sort()
+        c = candidates.pop()
+        if c.dead:
+            continue
+        if c.radius < E:
+            break
+        for loser in candidates:
+            loser.shrink([c])
+        winners.append(c)
 
-    # For every facet construct sphere
-    return spheres
+
+    return winners

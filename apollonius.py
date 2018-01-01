@@ -33,6 +33,7 @@ if args.raster:
     print("sphering")
     cspheres = [spheres.Sphere(point, radius=args.epsilon/2) for point in points]
 else:
+    print("sphering")
     cspheres = apolloniator.apolloniate(solid, points, args.epsilon)
 
 print("writing")
