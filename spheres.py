@@ -7,15 +7,13 @@ class Sphere:
         self.center = center
         self.radius = radius
         self.face = face
+        self.bounding = face is not None
         self.dead = False
-
-    def bounding(self):
-        return self.face is not None
 
     def shrink(self, other, E):
         distance = np.linalg.norm(self.center - other.center) - other.radius
         if distance >= self.radius: return
-        if other.bounding():
+        if other.bounding:
             Tin = np.vstack([other.face, self.center])
             Tin = np.hstack([Tin, np.ones([4, 1])])
             if np.linalg.det(Tin) < 0: return

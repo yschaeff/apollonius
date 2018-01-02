@@ -128,14 +128,14 @@ def ranges(intersections):
 class Solid:
 
     def __init__(self, stl_path):
-        self.solid = stl.mesh.Mesh.from_file(stl_path)
-        self.min = np.min(np.min(self.solid.vectors, 0), 0)
-        self.max = np.max(np.max(self.solid.vectors, 0), 0)
+        self.mesh = stl.mesh.Mesh.from_file(stl_path)
+        self.min = np.min(np.min(self.mesh.vectors, 0), 0)
+        self.max = np.max(np.max(self.mesh.vectors, 0), 0)
         ##every face must have bounding box, then generete octree
-        self.boxes = [bb(vertices) for vertices in self.solid.vectors]
+        self.boxes = [bb(vertices) for vertices in self.mesh.vectors]
 
     def mass(self):
-        return self.solid.get_mass_properties()[0]
+        return self.mesh.get_mass_properties()[0]
 
     def boundingbox(self):
         return self.min, self.max
@@ -148,7 +148,7 @@ class Solid:
         p0, p1 = line
         Intersection = namedtuple("Intersection", "point, normal, on_edge")
         intersections = []
-        for (normal, vertices, _), box in zip(self.solid.data, self.boxes):
+        for (normal, vertices, _), box in zip(self.mesh.data, self.boxes):
             if any((p0 < box[0])[1:]) and any((p0 > box[1])[1:]):
                 continue
 
@@ -191,7 +191,7 @@ class Solid:
         Intersection = namedtuple("Intersection", "point, normal, on_edge")
         #For every face generate intersections
         slices = defaultdict(list)
-        for normal, face, _ in self.solid.data:
+        for normal, face, _ in self.mesh.data:
             if normal[AXIS] == 0:
                 continue
             triangle = face_to_triangle(face)

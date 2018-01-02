@@ -19,11 +19,11 @@ def face2sphere(face, normal, epsilon):
     x, y, z, r = -D/2, -E/2, -F/2, math.sqrt(D**2+E**2+F**2-4*G)/2
     return spheres.Sphere(np.array([x, y, z]), r, face)
 
-def solid2spheres(solid, epsilon): # -> list of spheres
-    return [face2sphere(face, normal, epsilon) for normal, face, _ in solid.data]
+def mesh2spheres(mesh, epsilon): # -> list of spheres
+    return [face2sphere(face, normal, epsilon) for normal, face, _ in mesh.data]
 
 def apolloniate(solid, points, E):
-    winners = solid2spheres(solid.solid, E/1000)
+    winners = mesh2spheres(solid.mesh, E/1000)
     candidates = [spheres.Sphere(point) for point in points]
 
     l = len(candidates)
@@ -36,17 +36,14 @@ def apolloniate(solid, points, E):
     print("")
 
     candidates.sort()
-    print(len(candidates), len(winners))
     while candidates:
-        print("candidates: {}/{})\r".format(len(winners), len(candidates)), end="")
+        print("spheres: {} candidates: {})\r".format(len(winners), len(candidates)), end="")
         candidate = candidates.pop()
-        if candidate.dead:
-            break
+        if candidate.dead: break
         ##apply rest of winners
         for i, winner in enumerate(winners[candidate.wi:]):
             candidate.shrink(winner, E)
-            if candidate.dead:
-                break
+            if candidate.dead: break
             if candidates and candidate < candidates[-1]:
                 #reinsert
                 candidate.wi += i+1

@@ -13,7 +13,7 @@ def sphere2mesh(sphere, sprite, E):
 
 def write(spheres, outfile, infile, spritefile, E):
     sprite = stl.mesh.Mesh.from_file(spritefile)
-    sprites = [sphere2mesh(sphere, sprite, E) for sphere in spheres if not sphere.bounding()]
+    sprites = [sphere2mesh(sphere, sprite, E) for sphere in spheres if not sphere.bounding]
     if not sprites:
         print("No samples found")
         return True
