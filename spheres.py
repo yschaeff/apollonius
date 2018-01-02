@@ -16,7 +16,10 @@ class Sphere:
         if other.bounding:
             Tin = np.vstack([other.face, self.center])
             Tin = np.hstack([Tin, np.ones([4, 1])])
-            if np.linalg.det(Tin) < 0: return
+            dTin = np.linalg.det(Tin)
+            if dTin < -0.001: #consider very tiny determinant as on the line
+            #if dTin < 0:
+                return
         if distance < E/2:
             self.dead = True
         elif self.radius > distance:

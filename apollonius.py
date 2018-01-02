@@ -9,6 +9,7 @@ parser.add_argument("input", help="Base STL file", action="store")
 parser.add_argument("output", help="file to write STL or SCAD", action="store")
 parser.add_argument("-s", "--openscad", help="output OpenSCAD file instead of STL", action="store_true")
 parser.add_argument("-e", "--epsilon", help="resolution", action="store", type=float)
+parser.add_argument("-m", "--max-radius", help="maximum radius of sprite", action="store", type=float)
 parser.add_argument("-u", "--unit", help="voxel STL", action="store")
 parser.add_argument("-r", "--raster", help="only rasterize", action="store_true")
 args = parser.parse_args()
@@ -34,7 +35,7 @@ if args.raster:
     cspheres = [spheres.Sphere(point, radius=args.epsilon/2) for point in points]
 else:
     print("sphering")
-    cspheres = apolloniator.apolloniate(solid, points, args.epsilon)
+    cspheres = apolloniator.apolloniate(solid, points, args.epsilon, args.max_radius)
 
 print("writing")
 if args.openscad:

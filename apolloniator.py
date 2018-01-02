@@ -22,15 +22,17 @@ def face2sphere(face, normal, epsilon):
 def mesh2spheres(mesh, epsilon): # -> list of spheres
     return [face2sphere(face, normal, epsilon) for normal, face, _ in mesh.data]
 
-def apolloniate(solid, points, E):
+def apolloniate(solid, points, E, MAX_E):
+    if MAX_E is None: MAX_E = math.inf
     winners = mesh2spheres(solid.mesh, E/1000)
-    candidates = [spheres.Sphere(point) for point in points]
+    candidates = [spheres.Sphere(point, radius=MAX_E) for point in points]
 
     l = len(candidates)
     for ci, candidate in enumerate(candidates):
+        candidate.id = ci # monkey patch
         for i, winner in enumerate(winners):
             candidate.shrink(winner, E)
-            if candidate.radius != math.inf: break
+            if candidate.radius != MAX_E: break
         candidate.wi = i+1 # monkey patch
         print("initializing candidates: {}/{})\r".format(ci, l), end="")
     print("")
@@ -51,5 +53,6 @@ def apolloniate(solid, points, E):
                 break
         else:
             winners.append(candidate)
+            #print(candidate.id, candidate)
     print("")
     return winners
