@@ -18,18 +18,20 @@ class Sphere:
             if distance >= self.radius: continue
             Tin = np.vstack([other.face, self.center])
             Tin = np.hstack([Tin, np.ones([4, 1])])
-            if np.linalg.det(Tin) < 0: continue
+            #for very tiny determinant consider point on line
+            if np.linalg.det(Tin) < 0 and abs(np.linalg.det(Tin)) > 0.01:
+                continue
             if distance <= 0:
                 self.dead = True
                 return
             elif self.radius > distance:
                 self.radius = distance
 
-    def shrink(self, other):
+    def shrink(self, other, E):
         if self.dead: return
         distance = np.linalg.norm(self.center - other.center) - other.radius
         if distance >= self.radius: return
-        if distance <= 0:
+        if distance < E/2:
             self.dead = True
             return
         if self.radius > distance:

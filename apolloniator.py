@@ -23,25 +23,42 @@ def solid2spheres(solid, epsilon): # -> list of spheres
     return [face2sphere(face, normal, epsilon) for normal, face, _ in solid.data]
 
 def apolloniate(solid, points, E):
-    winners = solid2spheres(solid.solid, E/100)
+    winners = solid2spheres(solid.solid, E/1000)
     candidates = [spheres.Sphere(point) for point in points]
 
-    n = len(candidates)
+    m = n = len(candidates)
     w = len(winners)
-    print(n, w)
-    
-    for candidate in candidates:
+    print("Faces: {}, Dices: {}".format(w, n))
+
+    index = 0
+    print("calculating inital size")
+    for i, candidate in enumerate(candidates):
+        print("candidate: {}/{} ({}%)\r".format(i, n, i*100//m), end="")
         candidate.shrink_bounding(winners)
+        if candidates[index].dead or (candidate.radius > candidates[index].radius and not candidate.dead):
+            index = i
+    print("")
+
+    print("eliminating")
     while candidates:
-        candidates.sort()
-        c = candidates.pop()
+        print("queue size: {}\r".format(n), end="")
+        c = candidates.pop(index)
+        n -= 1
         if c.dead:
-            continue
-        if c.radius < E:
             break
-        for loser in candidates:
-            loser.shrink(c)
+            continue
+        if c.radius < E/2:
+            break
+        index = 0
+        #filtering the list seems to make it hardly any faster!
+        #candidates = [candidate for candidate in candidates if not candidate.dead]
+        for i, loser in enumerate(candidates):
+            loser.shrink(c, E)
+            #if loser > candidates[index] and not loser.dead:
+            if candidates[index].dead or (loser.radius > candidates[index].radius and not loser.dead):
+                index = i
         winners.append(c)
+    print("")
 
 
     return winners
