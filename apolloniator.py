@@ -1,5 +1,5 @@
 import numpy as np
-import math
+import bisect, math
 import spheres
 
 def coefficients(Tin, tv, i):
@@ -26,39 +26,33 @@ def apolloniate(solid, points, E):
     winners = solid2spheres(solid.solid, E/1000)
     candidates = [spheres.Sphere(point) for point in points]
 
-    m = n = len(candidates)
-    w = len(winners)
-    print("Faces: {}, Dices: {}".format(w, n))
-
-    index = 0
-    print("calculating inital size")
-    for i, candidate in enumerate(candidates):
-        print("candidate: {}/{} ({}%)\r".format(i, n, i*100//m), end="")
-        candidate.shrink_bounding(winners)
-        if candidates[index].dead or (candidate.radius > candidates[index].radius and not candidate.dead):
-            index = i
+    l = len(candidates)
+    for ci, candidate in enumerate(candidates):
+        for i, winner in enumerate(winners):
+            candidate.shrink(winner, E)
+            if candidate.radius != math.inf: break
+        candidate.wi = i+1 # monkey patch
+        print("initializing candidates: {}/{})\r".format(ci, l), end="")
     print("")
 
-    print("eliminating")
+    candidates.sort()
+    print(len(candidates), len(winners))
     while candidates:
-        print("queue size: {}\r".format(n), end="")
-        c = candidates.pop(index)
-        n -= 1
-        if c.dead:
+        print("candidates: {}/{})\r".format(len(winners), len(candidates)), end="")
+        candidate = candidates.pop()
+        if candidate.dead:
             break
-            continue
-        if c.radius < E/2:
-            break
-        index = 0
-        #filtering the list seems to make it hardly any faster!
-        #candidates = [candidate for candidate in candidates if not candidate.dead]
-        for i, loser in enumerate(candidates):
-            loser.shrink(c, E)
-            #if loser > candidates[index] and not loser.dead:
-            if candidates[index].dead or (loser.radius > candidates[index].radius and not loser.dead):
-                index = i
-        winners.append(c)
+        ##apply rest of winners
+        for i, winner in enumerate(winners[candidate.wi:]):
+            candidate.shrink(winner, E)
+            if candidate.dead:
+                break
+            if candidates and candidate < candidates[-1]:
+                #reinsert
+                candidate.wi += i+1
+                bisect.insort_left(candidates, candidate)
+                break
+        else:
+            winners.append(candidate)
     print("")
-
-
     return winners
