@@ -18,9 +18,7 @@ class Sphere:
             if distance >= self.radius: continue
             Tin = np.vstack([other.face, self.center])
             Tin = np.hstack([Tin, np.ones([4, 1])])
-            #for very tiny determinant consider point on line
-            if np.linalg.det(Tin) < 0 and abs(np.linalg.det(Tin)) > 0.01:
-                continue
+            if np.linalg.det(Tin) < 0: continue
             if distance <= 0:
                 self.dead = True
                 return
