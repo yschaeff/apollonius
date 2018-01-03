@@ -2,7 +2,7 @@
 def sphere_to_scad(sphere, E):
     extra = E/10
     s = "translate([%f, %f, %f]) sphere(r=%f);" % (*sphere.center, sphere.radius+extra)
-    if sphere.bounding():
+    if sphere.bounding:
         return "//" + s
     return s
 
