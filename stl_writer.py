@@ -11,12 +11,19 @@ def sphere2mesh(sphere, sprite, E):
     copy.vectors += sphere.center
     return copy
 
-def write(spheres, outfile, infile, spritefile, E):
-    sprite = stl.mesh.Mesh.from_file(spritefile)
+def write_spheres(spheres, outfile, sprite, E):
     sprites = [sphere2mesh(sphere, sprite, E) for sphere in spheres if not sphere.bounding]
     if not sprites:
         print("No samples found")
-        return True
-    combined = stl.mesh.Mesh(np.concatenate([sprite.data for sprite in sprites]))
-    combined.save(outfile, mode=stl.Mode.ASCII)  # save as ASCII
-    return False
+    else:
+        combined = stl.mesh.Mesh(np.concatenate([sprite.data for sprite in sprites]))
+        combined.save(outfile, mode=stl.Mode.ASCII)  # save as ASCII
+
+def write(mmspheres, outfile, infile, spritefile, E):
+    sprite = stl.mesh.Mesh.from_file(spritefile)
+    if len(mmspheres) == 1:
+        write_spheres(mmspheres[0], outfile, sprite, E)
+    else:
+        for i, spheres in enumerate(mmspheres):
+            out = "MM{}_{}".format(i, outfile)
+            write_spheres(spheres, out, sprite, E)

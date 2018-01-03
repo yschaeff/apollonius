@@ -13,6 +13,14 @@ def compute_epsilon(solid, epsilon):
     print("Using epsilon {} for maximum {} candidates".format(epsilon, int(samples)))
     return epsilon
 
+def mm_split(colors, spheres, method):
+    if colors == 1: return [spheres]
+    sl = [[] for i in range(colors)]
+    if method == "roundrobin":
+        for i, s in enumerate(spheres):
+            sl[i%colors].append(s)
+    return sl
+
 parser = argparse.ArgumentParser()
 parser.add_argument("input", help="Base STL file", action="store")
 parser.add_argument("output", help="file to write STL or SCAD", action="store")
@@ -20,6 +28,7 @@ parser.add_argument("-e", "--epsilon", help="resolution", action="store", type=f
 parser.add_argument("-m", "--max-radius", help="maximum radius of sprite", action="store", type=float)
 parser.add_argument("-u", "--unit", help="voxel STL", action="store")
 parser.add_argument("-r", "--raster", help="only rasterize", action="store_true")
+parser.add_argument("-M", "--multi-material", help="Number of colors", action="store", type=int, default=1)
 args = parser.parse_args()
 
 if not args.unit:
@@ -45,20 +54,23 @@ if in_ext == "stl":
 elif in_ext == "pickle":
     outname = args.output
     with open(args.input, 'rb') as f:
-        new_args, cspheres = pickle.load(f)
-        args.epsilon = new_args.epsilon
-        args.input = new_args.input
+        prev_args, cspheres = pickle.load(f)
+        args.epsilon = prev_args.epsilon
+        args.input = prev_args.input
 else:
     print("unknown input file type")
     sys.exit(1)
 
+
 out_ext = args.output.split(".")[-1].lower()
 if out_ext == "stl":
+    mmspheres = mm_split(args.multi_material, cspheres, "roundrobin")
     print("writing")
-    stl_writer.write(cspheres, args.output, args.input, args.unit, args.epsilon)
+    stl_writer.write(mmspheres, args.output, args.input, args.unit, args.epsilon)
 elif out_ext == "scad":
+    mmspheres = mm_split(args.multi_material, cspheres, "roundrobin")
     print("writing")
-    scad_writer.write(cspheres, args.output, args.input, args.epsilon)
+    scad_writer.write(mmspheres, args.output, args.input, args.epsilon)
 elif out_ext == "pickle":
     print("writing")
     ingredients = (args, cspheres)
