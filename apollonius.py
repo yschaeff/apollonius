@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import stl3d, spheres, scad_writer, stl_writer, apolloniator
-import sys, argparse, math
+import sys, argparse, math, pickle
 import numpy as np
 
 def compute_epsilon(solid, epsilon):
@@ -35,32 +35,33 @@ if in_ext == "stl":
     print("importing")
     solid = stl3d.Solid(args.input)
     args.epsilon = compute_epsilon(solid, args.epsilon)
-
     print("dicing")
     points = solid.discretize(args.epsilon)
-
     print("sphering")
     if args.raster:
         cspheres = [spheres.Sphere(point, radius=args.epsilon/2) for point in points]
     else:
         cspheres = apolloniator.apolloniate(solid, points, args.epsilon, args.max_radius)
 elif in_ext == "pickle":
-    pass
-
+    outname = args.output
+    with open(args.input, 'rb') as f:
+        new_args, cspheres = pickle.load(f)
+        args.epsilon = new_args.epsilon
+        args.input = new_args.input
 else:
     print("unknown input file type")
     sys.exit(1)
 
-
 out_ext = args.output.split(".")[-1].lower()
 if out_ext == "stl":
     print("writing")
-    r = stl_writer.write(cspheres, args.output, args.input, args.unit, args.epsilon)
+    stl_writer.write(cspheres, args.output, args.input, args.unit, args.epsilon)
 elif out_ext == "scad":
     print("writing")
-    r = scad_writer.write(cspheres, args.output, args.input, args.epsilon)
+    scad_writer.write(cspheres, args.output, args.input, args.epsilon)
 elif out_ext == "pickle":
+    print("writing")
     ingredients = (args, cspheres)
-    r = 0
+    with open(args.output, 'wb') as f:
+        pickle.dump(ingredients, f, pickle.HIGHEST_PROTOCOL)
 
-sys.exit(r)
