@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import stl3d, spheres, scad_writer, stl_writer, apolloniator
-import sys, argparse, math, pickle
+import sys, argparse, math, pickle, random
 import numpy as np
 
 def compute_epsilon(solid, epsilon):
@@ -14,11 +14,23 @@ def compute_epsilon(solid, epsilon):
     return epsilon
 
 def mm_split(colors, spheres, method):
+    method = method.lower()
     if colors == 1: return [spheres]
     sl = [[] for i in range(colors)]
     if method == "roundrobin":
         for i, s in enumerate(spheres):
             sl[i%colors].append(s)
+    if method == "random":
+        for i, s in enumerate(spheres):
+            sl[random.randint(0,colors-1)].append(s)
+    if method == "radius":
+        spheres.sort()
+        r = [spheres[int((i+1)* len(spheres)/colors)-1].radius for i in range(colors)]
+        i = 0
+        for s in spheres:
+            if s.radius > r[i]:
+                i += 1
+            sl[i].append(s)
     return sl
 
 parser = argparse.ArgumentParser()
@@ -29,6 +41,7 @@ parser.add_argument("-m", "--max-radius", help="maximum radius of sprite", actio
 parser.add_argument("-u", "--unit", help="voxel STL", action="store")
 parser.add_argument("-r", "--raster", help="only rasterize", action="store_true")
 parser.add_argument("-M", "--multi-material", help="Number of colors", action="store", type=int, default=1)
+parser.add_argument("-a", "--multi-material-algorithm", help="How to split", action="store", default="roundrobin")
 args = parser.parse_args()
 
 if not args.unit:
@@ -64,11 +77,11 @@ else:
 
 out_ext = args.output.split(".")[-1].lower()
 if out_ext == "stl":
-    mmspheres = mm_split(args.multi_material, cspheres, "roundrobin")
+    mmspheres = mm_split(args.multi_material, cspheres, args.multi_material_algorithm)
     print("writing")
     stl_writer.write(mmspheres, args.output, args.input, args.unit, args.epsilon)
 elif out_ext == "scad":
-    mmspheres = mm_split(args.multi_material, cspheres, "roundrobin")
+    mmspheres = mm_split(args.multi_material, cspheres, args.multi_material_algorithm)
     print("writing")
     scad_writer.write(mmspheres, args.output, args.input, args.epsilon)
 elif out_ext == "pickle":
