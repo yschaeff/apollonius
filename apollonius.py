@@ -51,6 +51,9 @@ out_ext = args.output.split(".")[-1].lower()
 if not out_ext in "stl scad pickle".split():
     print("output file extension must be one of stl, scad, or pickle")
     sys.exit(1)
+if not args.multi_material_algorithm in "roundrobin random radius".split():
+    print("algo unsuported")
+    sys.exit(1)
 
 in_ext = args.input.split(".")[-1].lower()
 if in_ext == "stl":
@@ -65,7 +68,6 @@ if in_ext == "stl":
     else:
         cspheres = apolloniator.apolloniate(solid, points, args.epsilon, args.max_radius)
 elif in_ext == "pickle":
-    outname = args.output
     with open(args.input, 'rb') as f:
         prev_args, cspheres = pickle.load(f)
         args.epsilon = prev_args.epsilon

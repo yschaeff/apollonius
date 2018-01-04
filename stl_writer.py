@@ -24,6 +24,9 @@ def write(mmspheres, outfile, infile, spritefile, E):
     if len(mmspheres) == 1:
         write_spheres(mmspheres[0], outfile, sprite, E)
     else:
+        fn = outfile.split(".")
         for i, spheres in enumerate(mmspheres):
-            out = "MM{}_{}".format(i, outfile)
+            fni = fn[:]
+            fni[-2] += "_MM{}".format(i)
+            out = ".".join(fni)
             write_spheres(spheres, out, sprite, E)
