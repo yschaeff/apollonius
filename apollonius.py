@@ -34,14 +34,15 @@ def mm_split(colors, spheres, method):
     return sl
 
 parser = argparse.ArgumentParser()
-parser.add_argument("input", help="Base STL file", action="store")
-parser.add_argument("output", help="file to write STL or SCAD", action="store")
+parser.add_argument("input", help="Base STL file or pickle", action="store")
+parser.add_argument("output", help="file to write STL or SCAD or pickle", action="store")
 parser.add_argument("-e", "--epsilon", help="resolution", action="store", type=float)
 parser.add_argument("-m", "--max-radius", help="maximum radius of sprite", action="store", type=float)
 parser.add_argument("-u", "--unit", help="voxel STL", action="store")
 parser.add_argument("-r", "--raster", help="only rasterize", action="store_true")
 parser.add_argument("-M", "--multi-material", help="Number of colors", action="store", type=int, default=1)
 parser.add_argument("-a", "--multi-material-algorithm", help="How to split", action="store", default="roundrobin")
+parser.add_argument("-p", "--pack", help="pack spheres", action="store", type=int, default = 0)
 args = parser.parse_args()
 
 if not args.unit:
@@ -66,7 +67,7 @@ if in_ext == "stl":
     if args.raster:
         cspheres = [spheres.Sphere(point, radius=args.epsilon/2) for point in points]
     else:
-        cspheres = apolloniator.apolloniate(solid, points, args.epsilon, args.max_radius)
+        cspheres = apolloniator.apolloniate(solid, points, args.epsilon, args.max_radius, args.pack)
 elif in_ext == "pickle":
     with open(args.input, 'rb') as f:
         prev_args, cspheres = pickle.load(f)

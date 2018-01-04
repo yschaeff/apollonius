@@ -22,7 +22,32 @@ def face2sphere(face, normal, epsilon):
 def mesh2spheres(mesh, epsilon): # -> list of spheres
     return [face2sphere(face, normal, epsilon) for normal, face, _ in mesh.data]
 
-def apolloniate(solid, points, E, MAX_E):
+def explode(p, E):
+    dE = E/2
+    for x in [-1, 0, 1]:
+        for y in [-1, 0, 1]:
+            for z in [-1, 0, 1]:
+                if x==y==z==0: continue
+                yield np.array([p[0]+x*dE, p[1]+y*dE,  p[2]+z*dE])
+
+def wiggle(solid, winners, candidate, E, MAX_E, depth):
+    for d in range(depth):
+        E /= 2
+        points = [p for p in explode(candidate.center, E) if solid.point_inside(p)]
+        new_cand = [spheres.Sphere(point, radius=MAX_E) for point in points]
+        best = new_cand[0]
+        for nc in new_cand:
+            for winner in winners:
+                nc.shrink(winner, E)
+                if nc.dead: break
+            else:
+                if nc > best:
+                    best = nc
+        if best > candidate:
+            candidate = best
+    return candidate
+
+def apolloniate(solid, points, E, MAX_E, pack):
     if MAX_E is None: MAX_E = math.inf
     winners = mesh2spheres(solid.mesh, E/1000)
     candidates = [spheres.Sphere(point, radius=MAX_E) for point in points]
@@ -52,6 +77,7 @@ def apolloniate(solid, points, E, MAX_E):
                 bisect.insort_left(candidates, candidate)
                 break
         else:
+            candidate = wiggle(solid, winners, candidate, E, MAX_E, pack)
             winners.append(candidate)
             #print(candidate.id, candidate)
     print("")
