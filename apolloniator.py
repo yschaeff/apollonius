@@ -52,19 +52,19 @@ def apolloniate(solid, points, E, MAX_E, pack):
     winners = mesh2spheres(solid.mesh, E/1000)
     candidates = [spheres.Sphere(point, radius=MAX_E) for point in points]
 
-    l = len(candidates)
+    len_c = len(candidates)
+    len_w = len(winners)
     for ci, candidate in enumerate(candidates):
-        candidate.id = ci # monkey patch
         for i, winner in enumerate(winners):
             candidate.shrink(winner, E)
             if candidate.radius != MAX_E: break
         candidate.wi = i+1 # monkey patch
-        print("initializing candidates: {}/{})\r".format(ci, l), end="")
+        print("initializing candidates: {}/{} \r".format(ci, len_c), end="")
     print("")
 
     candidates.sort()
     while candidates:
-        print("spheres: {} candidates: {})\r".format(len(winners), len(candidates)), end="")
+        print("spheres: {} candidates: {} ({:.2f}%) \r".format(len(winners)-len_w, len(candidates), 100-(100*len(candidates)/len_c)), end="")
         candidate = candidates.pop()
         if candidate.dead: break
         ##apply rest of winners
@@ -79,6 +79,5 @@ def apolloniate(solid, points, E, MAX_E, pack):
         else:
             candidate = wiggle(solid, winners, candidate, E, MAX_E, pack)
             winners.append(candidate)
-            #print(candidate.id, candidate)
     print("")
     return winners

@@ -24,7 +24,7 @@ def write(mmspheres, outfile, infile, E):
             for sphere in mmspheres[0]:
                 print(sphere_to_scad(sphere, E), file=f)
         else:
-            for i, spheres in enumerate(mmspheres):
+            for i, spheres in enumerate(reversed(mmspheres)):
                 r = i/len(mmspheres)
                 g = ((i+1)%len(mmspheres))/len(mmspheres)
                 b = ((i+2)%len(mmspheres))/len(mmspheres)

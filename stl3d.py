@@ -133,6 +133,7 @@ class Solid:
         self.max = np.max(np.max(self.mesh.vectors, 0), 0)
         ##every face must have bounding box, then generete octree
         self.boxes = [bb(vertices) for vertices in self.mesh.vectors]
+        print("Solid {} had {} faces".format(stl_path, len(self.mesh.data)))
 
     def mass(self):
         return self.mesh.get_mass_properties()[0]
