@@ -1,14 +1,14 @@
 
 def sphere_to_scad_color(sphere, E, r, g, b):
     extra = E/10
-    s = "translate([%f, %f, %f]) color([%f, %f, %f, 1]) sphere(r=%f);" % (*sphere.center, r, g, b, sphere.radius+extra)
+    s = "translate([%g, %g, %g]) color([%g, %g, %g, 1]) sphere(r=%g);" % (*sphere.center, r, g, b, sphere.radius+extra)
     if sphere.bounding:
         return "//" + s
     return s
 
 def sphere_to_scad(sphere, E):
     extra = E/10
-    s = "translate([%f, %f, %f]) sphere(r=%f);" % (*sphere.center, sphere.radius+extra)
+    s = "translate([%g, %g, %g]) sphere(r=%g);" % (*sphere.center, sphere.radius+extra)
     if sphere.bounding:
         return "//" + s
     return s
@@ -21,13 +21,13 @@ def write(mmspheres, outfile, infile, E):
         print("% import(\"" + infile + "\");", file=f)
 
         if len(mmspheres) == 1:
-            for sphere in mmspheres[0]:
+            for sphere in reversed(mmspheres[0]):
                 print(sphere_to_scad(sphere, E), file=f)
         else:
-            for i, spheres in enumerate(reversed(mmspheres)):
+            for i, spheres in enumerate(mmspheres):
                 r = i/len(mmspheres)
                 g = ((i+1)%len(mmspheres))/len(mmspheres)
                 b = ((i+2)%len(mmspheres))/len(mmspheres)
-                for sphere in spheres:
+                for sphere in reversed(spheres):
                     print(sphere_to_scad_color(sphere, E, r, g, b), file=f)
 
