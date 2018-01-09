@@ -1,26 +1,38 @@
 import math
 import numpy as np
+from stl3d import line_triangle_intersection
 
 class Sphere:
 
-    def __init__(self, center, radius=math.inf, face=None):
+    def __init__(self, center, radius=math.inf, face=None, normal=None):
         self.center = center
         self.radius = radius
         self.face = face
+        self.normal = normal
         self.bounding = face is not None
         self.dead = False
 
     def shrink(self, other, E):
-        distance = np.linalg.norm(self.center - other.center) - other.radius
-        if distance >= self.radius: return
         if other.bounding:
-            Tin = np.vstack([other.face, self.center])
-            Tin = np.hstack([Tin, np.ones([4, 1])])
-            dTin = np.linalg.det(Tin)
-            if dTin < -0.001: #consider very tiny determinant as on the line
-            #if dTin < 0:
-                return
+            #distance is min distance to vertices
+            #if projection in polygon consider it as well.
+            dd = [np.linalg.norm(self.center - v) for v in other.face]
+
+            line = [self.center, self.center+other.normal]
+            triangle = other.face
+            normal = other.normal
+            P, in_triangle, on_edge =  line_triangle_intersection(line, triangle, normal)
+            if in_triangle:
+                dd.append(np.linalg.norm(self.center - P))
+            else:
+                #calculate the distance to the line segments instead
+                pass
+            distance = min(dd)
+        else:
+            distance = np.linalg.norm(self.center - other.center) - other.radius
+        if distance >= self.radius: return
         if distance < E/2:
+            #print(other.center[0])
             self.dead = True
         elif self.radius > distance:
             self.radius = distance

@@ -1,5 +1,5 @@
 import numpy as np
-import bisect, math
+import bisect, math, sys
 import spheres
 
 def coefficients(Tin, tv, i):
@@ -9,7 +9,8 @@ def coefficients(Tin, tv, i):
 
 def face2sphere(face, normal, epsilon):
     ## from: http://www.ambrsoft.com/TrigoCalc/Sphere/Spher3D_.htm
-    v_epsilon = (normal/np.linalg.norm(normal)) * epsilon
+    normal /= np.linalg.norm(normal)
+    v_epsilon = normal * epsilon
     vector4 = sum(face)/3 - v_epsilon
     vectors = np.vstack([face, vector4])
     tv =  [-sum(vector**2) for vector in vectors]
@@ -17,7 +18,7 @@ def face2sphere(face, normal, epsilon):
     T = np.linalg.det(Tin)
     D, E, F, G = [coefficients(Tin, tv, i)/T for i in range(4)]
     x, y, z, r = -D/2, -E/2, -F/2, math.sqrt(D**2+E**2+F**2-4*G)/2
-    return spheres.Sphere(np.array([x, y, z]), r, face)
+    return spheres.Sphere(np.array([x, y, z]), r, face, normal)
 
 def mesh2spheres(mesh, epsilon): # -> list of spheres
     return [face2sphere(face, normal, epsilon) for normal, face, _ in mesh.data]
@@ -59,12 +60,12 @@ def apolloniate(solid, points, E, MAX_E, pack):
             candidate.shrink(winner, E)
             if candidate.radius != MAX_E: break
         candidate.wi = i+1 # monkey patch
-        print("initializing candidates: {}/{} \r".format(ci, len_c), end="")
-    print("")
+        print("initializing candidates: {}/{} \r".format(ci, len_c), end="", file=sys.stderr)
+    print("", file=sys.stderr)
 
     candidates.sort()
     while candidates:
-        print("spheres: {} candidates: {} ({:.2f}%) \r".format(len(winners)-len_w, len(candidates), 100-(100*len(candidates)/len_c)), end="")
+        print("spheres: {} candidates: {} ({:.2f}%) \r".format(len(winners)-len_w, len(candidates), 100-(100*len(candidates)/len_c)), end="", file=sys.stderr)
         candidate = candidates.pop()
         if candidate.dead: break
         ##apply rest of winners
@@ -79,5 +80,5 @@ def apolloniate(solid, points, E, MAX_E, pack):
         else:
             candidate = wiggle(solid, winners, candidate, E, MAX_E, pack)
             winners.append(candidate)
-    print("")
+    print("", file=sys.stderr)
     return winners
