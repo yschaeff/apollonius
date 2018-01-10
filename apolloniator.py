@@ -1,6 +1,8 @@
 import numpy as np
+from collections import defaultdict
 import bisect, math, sys
 import spheres
+import octree
 
 def coefficients(Tin, tv, i):
     S = Tin.copy()
@@ -51,34 +53,37 @@ def wiggle(solid, winners, candidate, E, MAX_E, depth):
 def apolloniate(solid, points, E, MAX_E, pack):
     if MAX_E is None: MAX_E = math.inf
     winners = mesh2spheres(solid.mesh, E/1000)
-    candidates = [spheres.Sphere(point, radius=MAX_E) for point in points]
+    candidates = [spheres.Sphere(point) for point in points]
+    
+    smin, smax = bb = solid.boundingbox()
+    for c in candidates:
+        r = min(np.min(abs(smin - c.center)), np.min(abs(smax - c.center)))
+        c.radius = min(r, MAX_E)
+        c.wi = defaultdict(int)
+    
+    ot = octree.Octree(bb)
+    for winner in winners:
+        ot.insert(winner)
+    #ot.print()
 
     len_c = len(candidates)
     len_w = len(winners)
-    for ci, candidate in enumerate(candidates):
-        for i, winner in enumerate(winners):
-            candidate.shrink(winner, E)
-            if candidate.radius != MAX_E: break
-        candidate.wi = i+1 # monkey patch
-        print("initializing candidates: {}/{} \r".format(ci, len_c), end="", file=sys.stderr)
-    print("", file=sys.stderr)
 
     candidates.sort()
+    wi = len_w
     while candidates:
         print("spheres: {} candidates: {} ({:.2f}%) \r".format(len(winners)-len_w, len(candidates), 100-(100*len(candidates)/len_c)), end="", file=sys.stderr)
         candidate = candidates.pop()
         if candidate.dead: break
-        ##apply rest of winners
-        for i, winner in enumerate(winners[candidate.wi:]):
-            candidate.shrink(winner, E)
-            if candidate.dead: break
-            if candidates and candidate < candidates[-1]:
-                #reinsert
-                candidate.wi += i+1
-                bisect.insort_left(candidates, candidate)
-                break
+        if candidates:
+            test = lambda: candidate < candidates[-1]
         else:
-            candidate = wiggle(solid, winners, candidate, E, MAX_E, pack)
+            test = lambda: candidate.dead
+        r = ot.insert_if(candidate, lambda x: candidate.shrink(x, E), test)
+        if candidate.dead: continue
+        if not r: # niet gelukt
+            bisect.insort_left(candidates, candidate)
+        else:
             winners.append(candidate)
     print("", file=sys.stderr)
     return winners

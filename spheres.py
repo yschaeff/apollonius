@@ -37,6 +37,15 @@ class Sphere:
         elif self.radius > distance:
             self.radius = distance
 
+    def bb(self):
+        if not self.bounding:
+            smin = self.center - self.radius
+            smax = self.center + self.radius
+        else:
+            smin = np.min(self.face, 0)
+            smax = np.max(self.face, 0)
+        return smin, smax
+
     def __repr__(self):
         return "{SPHERE: " + str((self.center, self.radius, self.face, self.dead)) +"}"
 
