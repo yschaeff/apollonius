@@ -2,7 +2,7 @@
     Given an STL file generate all points in the volume
 """
 
-import stl, sys
+import stl, sys, random
 import numpy as np
 from collections import namedtuple, defaultdict
 
@@ -127,13 +127,16 @@ def ranges(intersections):
 
 class Solid:
 
-    def __init__(self, stl_path):
+    def __init__(self, stl_path, reduce_vertices = False):
         self.mesh = stl.mesh.Mesh.from_file(stl_path)
+        print("Solid {} had {} faces".format(stl_path, len(self.mesh.data)))
+        if reduce_vertices:
+            self.mesh = self.reduce(reduce_vertices)
+            print("Solid {} had {} faces".format(stl_path, len(self.mesh.data)))
         self.min = np.min(np.min(self.mesh.vectors, 0), 0)
         self.max = np.max(np.max(self.mesh.vectors, 0), 0)
         ##every face must have bounding box, then generete octree
         self.boxes = [bb(vertices) for vertices in self.mesh.vectors]
-        print("Solid {} had {} faces".format(stl_path, len(self.mesh.data)))
 
     def mass(self):
         return self.mesh.get_mass_properties()[0]
@@ -235,3 +238,75 @@ class Solid:
                     if self.point_inside(point):
                         yield point
 
+    def reduce(self, n):
+        mesh = self.mesh
+        #while len(mesh) > n:
+        original = len(mesh)
+        removed = 0
+        vertices = defaultdict(list)
+        # dict of faces for every vertex
+        for i, vectors in enumerate(mesh.vectors):
+            #normal, vectors, _ = data
+            for vector in vectors:
+                vertices[tuple(vector)].append(i)
+        ## step find the most dull points
+        mask = set()
+        ## now starting from dullest point remove
+        for vr, face_indexes in vertices.items():
+            if not face_indexes: continue
+            if n >= original - removed: break
+            #for index in face_indexes:
+                #if index in mask: continue
+                #vc = None
+            for v in mesh.vectors[face_indexes[0]]:
+            #for v in mesh.vectors[index]:
+                if all(v==vr): continue
+                vc = v
+                break
+                #if vc is not None: break
+            else:
+                assert()
+                    
+            #vr is vector to remove
+            #vc is vector to collapse to
+            rem = []
+            for face_index in face_indexes:
+                if face_index in mask:
+                    print(face_index, "already deleted")
+                    continue
+                a, b = -1, -1
+                print("deleting:", vr, "from face", face_index)
+                for i, v in enumerate(mesh.vectors[face_index]):
+                    if all(v==vr):
+                        a = i
+                        continue
+                    if all(v==vc):
+                        b = i
+                        continue
+                if a == -1:
+                    panick
+                if b == -1:
+                    print("collapse it")
+                    #collapse
+                    face = mesh.vectors[face_index]
+                    mesh.vectors[face_index][a] = vc
+                    #mesh.vectors[face_index][a] = np.array([0, 0, 0])
+                    #vertices[tuple(vr)].remove(face_index)
+                    rem.append(face_index)
+                    vertices[tuple(vc)].append(face_index)
+                else:
+                    print("remove it")
+                    removed += 1
+                    mask.add(face_index)
+                    for v in mesh.vectors[face_index]:
+                        if all(v == vr):
+                            rem.append(face_index)
+                        else:
+                            vertices[tuple(v)].remove(face_index)
+            #print(vr, rem, )
+            for face_index in rem:
+                vertices[tuple(vr)].remove(face_index)
+        data = np.delete(mesh.data, list(mask), 0)
+        print(removed, len(data))
+        mesh = stl.mesh.Mesh(data)
+        return mesh

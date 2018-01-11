@@ -39,7 +39,8 @@ parser.add_argument("output", help="file to write STL or SCAD or pickle", action
 parser.add_argument("-e", "--epsilon", help="resolution", action="store", type=float)
 parser.add_argument("-m", "--max-radius", help="maximum radius of sprite", action="store", type=float)
 parser.add_argument("-u", "--unit", help="voxel STL", action="store")
-parser.add_argument("-r", "--raster", help="only rasterize", action="store_true")
+parser.add_argument("-g", "--grid", help="only rasterize", action="store_true")
+parser.add_argument("-r", "--reduce", help="reduce polygon count", action="store", type=int)
 parser.add_argument("-M", "--multi-material", help="Number of colors", action="store", type=int, default=1)
 parser.add_argument("-a", "--multi-material-algorithm", help="How to split", action="store", default="roundrobin")
 parser.add_argument("-p", "--pack", help="pack spheres", action="store", type=int, default = 0)
@@ -59,12 +60,16 @@ if not args.multi_material_algorithm in "roundrobin random radius".split():
 in_ext = args.input.split(".")[-1].lower()
 if in_ext == "stl":
     print("importing")
-    solid = stl3d.Solid(args.input)
+    solid = stl3d.Solid(args.input, args.reduce)
+    if args.reduce:
+        import stl
+        solid.mesh.save("tmp.stl", mode=stl.Mode.ASCII)  # save as ASCII
+    print(len(solid.mesh.data))
     args.epsilon = compute_epsilon(solid, args.epsilon)
     print("dicing")
     points = solid.discretize(args.epsilon)
     print("sphering")
-    if args.raster:
+    if args.grid:
         cspheres = [spheres.Sphere(point, radius=args.epsilon/2) for point in points]
     else:
         cspheres = apolloniator.apolloniate(solid, points, args.epsilon, args.max_radius, args.pack)

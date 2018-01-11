@@ -18,7 +18,8 @@ def write(mmspheres, outfile, infile, E):
         print("$fs=.01;", file=f)
         #print("$fa=10;", file=f)
         
-        print("% import(\"" + infile + "\");", file=f)
+        print("//% import(\"" + infile + "\");", file=f)
+        print("% import(\"tmp.stl\");", file=f)
 
         if len(mmspheres) == 1:
             for sphere in reversed(mmspheres[0]):
