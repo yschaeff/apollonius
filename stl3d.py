@@ -238,7 +238,22 @@ class Solid:
                     if self.point_inside(point):
                         yield point
 
+
+
     def reduce(self, n):
+        def sort_by_dull(vertices):
+            norms = []
+            for v, indices in vertices.items():
+                normals = [self.mesh.normals[index] for index in indices]
+                n = np.linalg.norm(np.sum(normals, 0))
+                norms.append((v, n))
+            norms.sort(reverse=True, key=lambda x: x[1])
+            return [v for v, n in  norms]
+
+        #NOTE: recalculate dullness
+        #NOTE: if two triangles share 3 vertices delete both
+        #NOTE if 2 triangles connected have opposite norm. collapse
+
         mesh = self.mesh
         #while len(mesh) > n:
         original = len(mesh)
@@ -249,10 +264,13 @@ class Solid:
             #normal, vectors, _ = data
             for vector in vectors:
                 vertices[tuple(vector)].append(i)
+        v_sort = sort_by_dull(vertices)
         ## step find the most dull points
         mask = set()
         ## now starting from dullest point remove
-        for vr, face_indexes in vertices.items():
+        for vr in v_sort:
+        #for vr, face_indexes in vertices.items():
+            face_indexes = vertices[vr]
             if not face_indexes: continue
             if n >= original - removed: break
             #for index in face_indexes:
@@ -272,10 +290,10 @@ class Solid:
             rem = []
             for face_index in face_indexes:
                 if face_index in mask:
-                    print(face_index, "already deleted")
+                    #print(face_index, "already deleted")
                     continue
                 a, b = -1, -1
-                print("deleting:", vr, "from face", face_index)
+                #print("deleting:", vr, "from face", face_index)
                 for i, v in enumerate(mesh.vectors[face_index]):
                     if all(v==vr):
                         a = i
@@ -286,7 +304,7 @@ class Solid:
                 if a == -1:
                     panick
                 if b == -1:
-                    print("collapse it")
+                    #print("collapse it")
                     #collapse
                     face = mesh.vectors[face_index]
                     mesh.vectors[face_index][a] = vc
@@ -295,7 +313,7 @@ class Solid:
                     rem.append(face_index)
                     vertices[tuple(vc)].append(face_index)
                 else:
-                    print("remove it")
+                    #print("remove it")
                     removed += 1
                     mask.add(face_index)
                     for v in mesh.vectors[face_index]:
