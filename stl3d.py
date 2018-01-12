@@ -245,7 +245,7 @@ class Solid:
             norms = []
             for v, indices in vertices.items():
                 normals = [self.mesh.normals[index] for index in indices]
-                n = np.linalg.norm(np.sum(normals, 0))
+                n = np.linalg.norm(np.sum(normals, 0)) / (len(normals)-1)
                 norms.append((v, n))
             norms.sort(reverse=True, key=lambda x: x[1])
             return [v for v, n in  norms]
@@ -255,7 +255,6 @@ class Solid:
         #NOTE if 2 triangles connected have opposite norm. collapse
 
         mesh = self.mesh
-        #while len(mesh) > n:
         original = len(mesh)
         removed = 0
         vertices = defaultdict(list)
