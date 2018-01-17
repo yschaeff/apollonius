@@ -241,6 +241,52 @@ class Solid:
 
 
     def reduce(self, n):
+        def curvature(n1, n2):
+            return 1 - np.dot(n1, n2)
+        def v2e(v1, v2):
+            return tuple(tuple(v1), tuple(v2))
+        def face2edges(face):
+            l = len(face)
+            for i, v in enumerate(face):
+                yield v2e(v, face[(i+1) % l])
+
+        # need a list of edges with cost
+        # need list of neighbours per vertex
+        # faces per vertex
+
+        faces_per_edge = defaultdict(list)
+        edges_per_vertex
+
+        for face in self.mesh.vectors:
+            for i, v in enumerate(face):
+                edge = v2e(
+
+
+        #top down
+        edges_sort_by_cost = [(edge, cost)]
+        while len(faces) > n:
+            #we need to remove 2 faces
+            edge, cost = edges_sort_by_cost.pop(0)
+            ui, vi = edge
+            u, v = vertices[ui], vertices[vi]
+            ##collapsing u to v
+            e_faces = faces_per_edge[edge] #faces to remove
+            edges_changes = set()
+            for face in e_faces:
+                for face_edge in face2edges(face):
+                    faces_per_edge[edge].remove(face)
+                    edges_changed.add(face_edge)
+            for edge_ch in edges_changed:
+                ##recalc cost:e 
+
+
+
+                for every edge remove face
+                faces.remove(face)
+            u_faces = faces_per_v[ui] #faces to change
+
+
+
         def sort_by_dull(vertices):
             norms = []
             for v, indices in vertices.items():
