@@ -2,7 +2,15 @@ import stl, sys
 import numpy as np
 from collections import defaultdict
 
+"""
+This model takes an stl mesh as input and outputs a simplified mesh
+"""
+
 def insort(array, item, key):
+    """
+    Insert item in sorted array. Implemented because bisect does not
+    support key function.
+    """
     ci = key(item)
     s = 0
     e = len(array)
@@ -19,11 +27,15 @@ def insort(array, item, key):
     array.insert(p, item)
 
 def weight(uH, VH):
+    """
+    The weight of vertex uH given its neighbour vertices.
+    Simplified curvature.
+    """
     u = np.array(uH)
     V = [np.array(v) for v in VH]
     return max(abs(np.sum([v-u for v in V], 0)))
 
-def toStrong(uH, collapses):
+def traverse_collapses(uH, collapses):
     while uH in collapses:
         uH = collapses[uH]
     return uH
@@ -45,38 +57,35 @@ def reduce(mesh, N):
         weights[uH] = weight(uH, VH)
     print("SORTING")
     queue = sorted(weights.keys(), key = lambda x: weights[x])
-    n = N
     print("FILTERING")
     collapses = dict()
     while queue:
         uH = queue.pop(0)
-        #if uH in Sstrong: break
-        if len(queue) < n:
-            print(len(queue), n)
+        if len(queue) < N:
             break
         VH = neighbours[uH]
         VH.discard(uH)
         assert(uH not in VH)
 
         ## neighbours might or might not already be collapsed, we dont care
-        W = [toStrong(v, collapses) for v in VH]
+        W = [traverse_collapses(v, collapses) for v in VH]
         W = [v for v in W if (v != uH)]
         W = sorted(W, key = lambda x: np.linalg.norm(np.array(x) - np.array(uH))) #lightest first
         vH = W[0]
         assert(vH != uH)
         collapses[uH] = vH
-        N = neighbours[vH]
-        N.update(VH)
-        N.discard(uH)
+        UH = neighbours[vH]
+        UH.update(VH)
+        UH.discard(uH)
         if vH in queue:
-            weights[vH] = weight(vH, N)
+            weights[vH] = weight(vH, UH)
             queue.remove(vH)
             insort(queue, vH, key = lambda x: weights[x])
 
     ## now write faces, translate all vertices if any two match ->delete
     data = np.zeros(50000, dtype = stl.mesh.Mesh.dtype)
     for i, face in enumerate(mesh.vectors):
-        UH = [toStrong(tuple(u), collapses) for u in face]
+        UH = [traverse_collapses(tuple(u), collapses) for u in face]
         if UH[0] == UH[1] or UH[0] == UH[2] or UH[1] == UH[2]:
             #colinear
             continue
