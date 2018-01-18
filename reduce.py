@@ -48,61 +48,85 @@ def reduce(mesh, N):
     collapses = dict()
     queue = vertices[n:] ## strong
     #queue = vertices[:n] ##weak
-    queue = vertices
-    PASS = 0
-    while queue:
-        PASS+=1
-        v, cost = queue.pop(0)
-        if v in collapses: continue
-        if v in Sstrong:
-            vH = v
-            UH = neighbours[vH]
-            add = set()
-            sub = set([vH])
-            UH.difference_update(Sstrong)
-            UH.difference_update(collapses)
-            if UH:
-                uH = min(list(UH), key = lambda x: weights[x])
-                sub.add(uH)
-                collapses[uH] = vH
-                add.update(neighbours[uH])
-                #for uH in UH:
-                    #sub.add(uH)
-                    ##if uH in Sstrong or uH in collapses:
-                        ##pass
-                    ##else:
-                    #collapses[uH] = vH
-                    #add.update(neighbours[uH])
-                    ##break
-                #UH.clear()
-                UH.update(add)
-                UH.difference_update(sub)
-                if UH:
-                    print("trigger?", len(UH))
-                    queue.append((vH, cost))
-        else:
-            uH = v
-            if uH in collapses:
-                continue
-            VH = neighbours[uH]
-            VH.difference_update(collapses.keys())
-            VH.discard(uH)
-            #S = VH.intersection(Sstrong)
-            S = VH.copy()
-            if S: ## strong neighbours
-                ## pick strong one to collapse to
-                vM = max(list(S), key = lambda x: weights[x])
-                vM = toStrong(vM, collapses)
+    for uH, cost in vertices:
+        if uH in Sstrong: break
+        VH = neighbours[uH]
+        #VH.difference_update(collapses)
+        #VV = [v for v in VH if toStrong(v, collapses)]
+        #W = sorted(VH, key = lambda x: weights[x])
 
-                collapses[uH] = vM
-                #neighbours[vM].update(VH.difference(Sstrong))
-                neighbours[vM].update(VH)
-                #neighbours[vM].remove(uH)
-            else:
-                if VH:
-                    #print(VH)
-                    queue.append((uH, cost))
-    print("PASSES", PASS)
+        W = sorted(VH, key = lambda x: weights[x] / np.linalg.norm(np.array(uH)- np.array(x)))
+        W = map(lambda x: toStrong(x, collapses), W)
+        W = list(filter(lambda x: x != uH, W))
+        w = W[-1] ## The most expensive
+        assert(w != uH)
+        collapses[uH] = w
+        N = neighbours[w]
+        N.update(W)
+        N.remove(w)
+        ## recalculate w
+        #if w not in Sstrong:
+        #weights[w] -= cost
+            #weights[w] += cost
+            #weights[w] /= 4
+
+
+
+    #queue = vertices
+    #PASS = 0
+    #while queue:
+        #PASS+=1
+        #v, cost = queue.pop(0)
+        #if v in collapses: continue
+        #if v in Sstrong:
+            #vH = v
+            #UH = neighbours[vH]
+            #add = set()
+            #sub = set([vH])
+            #UH.difference_update(Sstrong)
+            #UH.difference_update(collapses)
+            #if UH:
+                #uH = min(list(UH), key = lambda x: weights[x])
+                #sub.add(uH)
+                #collapses[uH] = vH
+                #add.update(neighbours[uH])
+                ##for uH in UH:
+                    ##sub.add(uH)
+                    ###if uH in Sstrong or uH in collapses:
+                        ###pass
+                    ###else:
+                    ##collapses[uH] = vH
+                    ##add.update(neighbours[uH])
+                    ###break
+                ##UH.clear()
+                #UH.update(add)
+                #UH.difference_update(sub)
+                #if UH:
+                    #print("trigger?", len(UH))
+                    #queue.append((vH, cost))
+        #else:
+            #uH = v
+            #if uH in collapses:
+                #continue
+            #VH = neighbours[uH]
+            #VH.difference_update(collapses.keys())
+            #VH.discard(uH)
+            ##S = VH.intersection(Sstrong)
+            #S = VH.copy()
+            #if S: ## strong neighbours
+                ### pick strong one to collapse to
+                #vM = max(list(S), key = lambda x: weights[x])
+                #vM = toStrong(vM, collapses)
+
+                #collapses[uH] = vM
+                ##neighbours[vM].update(VH.difference(Sstrong))
+                #neighbours[vM].update(VH)
+                ##neighbours[vM].remove(uH)
+            #else:
+                #if VH:
+                    ##print(VH)
+                    #queue.append((uH, cost))
+    #print("PASSES", PASS)
 
     ## now write faces, translate all vertices if any two match ->delete
     data = np.zeros(50000, dtype = stl.mesh.Mesh.dtype)
