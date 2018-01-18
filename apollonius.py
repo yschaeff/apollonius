@@ -40,7 +40,7 @@ parser.add_argument("-e", "--epsilon", help="resolution", action="store", type=f
 parser.add_argument("-m", "--max-radius", help="maximum radius of sprite", action="store", type=float)
 parser.add_argument("-u", "--unit", help="voxel STL", action="store")
 parser.add_argument("-g", "--grid", help="only rasterize", action="store_true")
-parser.add_argument("-r", "--reduce", help="reduce polygon count", action="store", type=int)
+parser.add_argument("-r", "--reduce", help="reduce vertex count", action="store", type=int, default=1000)
 parser.add_argument("-M", "--multi-material", help="Number of colors", action="store", type=int, default=1)
 parser.add_argument("-a", "--multi-material-algorithm", help="How to split", action="store", default="roundrobin")
 parser.add_argument("-p", "--pack", help="pack spheres", action="store", type=int, default = 0)

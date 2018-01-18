@@ -59,20 +59,16 @@ def reduce(mesh, N):
     queue = sorted(weights.keys(), key = lambda x: weights[x])
     print("FILTERING")
     collapses = dict()
-    while queue:
+    while len(queue) > N:
         uH = queue.pop(0)
-        if len(queue) < N:
-            break
         VH = neighbours[uH]
         VH.discard(uH)
-        assert(uH not in VH)
 
         ## neighbours might or might not already be collapsed, we dont care
         W = [traverse_collapses(v, collapses) for v in VH]
         W = [v for v in W if (v != uH)]
         W = sorted(W, key = lambda x: np.linalg.norm(np.array(x) - np.array(uH))) #lightest first
         vH = W[0]
-        assert(vH != uH)
         collapses[uH] = vH
         UH = neighbours[vH]
         UH.update(VH)
@@ -83,16 +79,18 @@ def reduce(mesh, N):
             insort(queue, vH, key = lambda x: weights[x])
 
     ## now write faces, translate all vertices if any two match ->delete
-    data = np.zeros(50000, dtype = stl.mesh.Mesh.dtype)
-    for i, face in enumerate(mesh.vectors):
+    data = mesh.data.copy()
+    face_count = 0
+    for face in mesh.vectors:
         UH = [traverse_collapses(tuple(u), collapses) for u in face]
-        if UH[0] == UH[1] or UH[0] == UH[2] or UH[1] == UH[2]:
-            #colinear
-            continue
-        data['vectors'][i] = np.stack([np.array(uH) for uH in UH])
-    reduced_mesh = stl.mesh.Mesh(data)
+        ## if vertices colinear the face is collapsed
+        if UH[0] == UH[1] or UH[0] == UH[2] or UH[1] == UH[2]: continue
+        data['vectors'][face_count] = np.stack([np.array(uH) for uH in UH])
+        face_count += 1
+    reduced_mesh = stl.mesh.Mesh(data[:face_count])
     return reduced_mesh
 
-mesh = stl.mesh.Mesh.from_file(sys.argv[1])
-reduced_mesh = reduce(mesh, int(sys.argv[2]))
-reduced_mesh.save("out.stl", mode=stl.Mode.ASCII)  # save as ASCII
+if False:
+    mesh = stl.mesh.Mesh.from_file(sys.argv[1])
+    reduced_mesh = reduce(mesh, int(sys.argv[2]))
+    reduced_mesh.save("out.stl", mode=stl.Mode.ASCII)  # save as ASCII
