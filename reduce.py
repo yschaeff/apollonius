@@ -55,18 +55,23 @@ def reduce(mesh, N):
         weights[uH] = weight(uH, VH)
     print("SORTING")
     vertices = sorted(weights.keys(), key = lambda x: weights[x])
-    n = len(vertices) - 1
-    if N < n: n = N
-    n = len(vertices) - n
+    #n = len(vertices) - 1
+    #if N < n: n = N
+    n = N
+    #n = len(vertices) - n
     #u = vertices[n] ## first of the weak points
     print("FILTERING")
-    Sstrong = set(vertices[n:])
+    #Sstrong = set(vertices[n:])
     collapses = dict()
     #queue = vertices[n:] ## strong
-    queue = vertices[:n] ##weak
+    #queue = vertices[:n] ##weak
+    queue = vertices ##weak
     while queue:
         uH = queue.pop(0)
-        if uH in Sstrong: break
+        #if uH in Sstrong: break
+        if len(queue) < n:
+            print(len(queue), n)
+            break
         VH = neighbours[uH]
         VH.discard(uH)
         assert(uH not in VH)
@@ -80,18 +85,21 @@ def reduce(mesh, N):
         W = [v for v in W if (v != uH)]
         #W = sorted(W, key = lambda x: x[1]) #lightest first
         W = sorted(W, key = lambda x: WW(x)) #lightest first
+        W = sorted(W, key = lambda x: np.linalg.norm(np.array(x) - np.array(uH))) #lightest first
         #W = sorted(W, key = lambda x: weights[x]) #lightest first
-        vH = W[-1]
-        #vH = W[0]
+        #vH = W[-1]
+        vH = W[0]
         assert(vH != uH)
         collapses[uH] = vH
         N = neighbours[vH]
         N.update(VH)
         #N.remove(vH)
         N.discard(uH)
-        weights[vH] = weight(vH, N)
-        vertices.remove(vH)
-        insort(vertices, vH, key = lambda x: weights[x])
+        if vH in queue:
+            weights[vH] = weight(vH, N)
+            #weights[vH] *= 2
+            queue.remove(vH)
+            insort(queue, vH, key = lambda x: weights[x])
 
     ## now write faces, translate all vertices if any two match ->delete
     data = np.zeros(50000, dtype = stl.mesh.Mesh.dtype)
