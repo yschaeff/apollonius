@@ -1,15 +1,6 @@
 import stl, sys
 import numpy as np
 from collections import defaultdict
-import bisect
-
-
-#for each vertex find all neighbours
-#for each vertex find cost (based on neighbours)
-#sort by cost
-#find cutoff cost
-#For each choosen ones collapse all unchoosen ones
-    #and cache that
 
 def insort(array, item, key):
     ci = key(item)
@@ -33,7 +24,6 @@ def weight(uH, VH):
     return max(abs(np.sum([v-u for v in V], 0)))
 
 def toStrong(uH, collapses):
-    #return collapses.get(uH, uH)
     while uH in collapses:
         uH = collapses[uH]
     return uH
@@ -54,18 +44,10 @@ def reduce(mesh, N):
     for uH, VH in neighbours.items():
         weights[uH] = weight(uH, VH)
     print("SORTING")
-    vertices = sorted(weights.keys(), key = lambda x: weights[x])
-    #n = len(vertices) - 1
-    #if N < n: n = N
+    queue = sorted(weights.keys(), key = lambda x: weights[x])
     n = N
-    #n = len(vertices) - n
-    #u = vertices[n] ## first of the weak points
     print("FILTERING")
-    #Sstrong = set(vertices[n:])
     collapses = dict()
-    #queue = vertices[n:] ## strong
-    #queue = vertices[:n] ##weak
-    queue = vertices ##weak
     while queue:
         uH = queue.pop(0)
         #if uH in Sstrong: break
@@ -76,28 +58,18 @@ def reduce(mesh, N):
         VH.discard(uH)
         assert(uH not in VH)
 
-        def WW(u):
-            return weight(u, neighbours[u])
-        
         ## neighbours might or might not already be collapsed, we dont care
         W = [toStrong(v, collapses) for v in VH]
-        #W = [(v , w) for v, w, selfmap in W if not selfmap]
         W = [v for v in W if (v != uH)]
-        #W = sorted(W, key = lambda x: x[1]) #lightest first
-        W = sorted(W, key = lambda x: WW(x)) #lightest first
         W = sorted(W, key = lambda x: np.linalg.norm(np.array(x) - np.array(uH))) #lightest first
-        #W = sorted(W, key = lambda x: weights[x]) #lightest first
-        #vH = W[-1]
         vH = W[0]
         assert(vH != uH)
         collapses[uH] = vH
         N = neighbours[vH]
         N.update(VH)
-        #N.remove(vH)
         N.discard(uH)
         if vH in queue:
             weights[vH] = weight(vH, N)
-            #weights[vH] *= 2
             queue.remove(vH)
             insort(queue, vH, key = lambda x: weights[x])
 
