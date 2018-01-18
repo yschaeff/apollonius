@@ -41,25 +41,31 @@ def traverse_collapses(uH, collapses):
     return uH
 
 def reduce(mesh, N):
-    print("INDEXING")
     neighbours = defaultdict(set)
-    for face in mesh.vectors:
+    l = len(mesh.vectors)
+    for i, face in enumerate(mesh.vectors):
+        print("INDEXING face: {} ({:.2f}%) \r".format(i, (100*(i/l))), end="", file=sys.stderr)
         for ui, u in enumerate(face):
             v = face[(ui+1)%3]
             vH = tuple(v)
             uH = tuple(u)
             neighbours[vH].add(uH)
             neighbours[uH].add(vH)
+    print("", file=sys.stderr)
+
     print("Found {} vertices. Reducing to {}.".format(len(neighbours), N))
-    print("WEIGHING")
+
     weights = dict()
-    for uH, VH in neighbours.items():
+    for i, (uH, VH) in enumerate(neighbours.items()):
+        print("WEIGHING face: {} ({:.2f}%) \r".format(i, (100*(i/len(neighbours)))), end="", file=sys.stderr)
         weights[uH] = weight(uH, VH)
-    print("SORTING")
+    print("", file=sys.stderr)
+
+    print("SORTING", file=sys.stderr)
     queue = sorted(weights.keys(), key = lambda x: weights[x])
-    print("FILTERING")
     collapses = dict()
     while len(queue) > N:
+        print("FILTERING queue: {} target: {} ({:.2f}%) \r".format(len(queue), N, 100-(100*(len(queue)-N)/len(weights))), end="", file=sys.stderr)
         uH = queue.pop(0)
         VH = neighbours[uH]
         VH.discard(uH)
@@ -77,6 +83,7 @@ def reduce(mesh, N):
             weights[vH] = weight(vH, UH)
             queue.remove(vH)
             insort(queue, vH, key = lambda x: weights[x])
+    print("", file=sys.stderr)
 
     ## now write faces, translate all vertices if any two match ->delete
     data = mesh.data.copy()
