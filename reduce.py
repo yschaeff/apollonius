@@ -17,11 +17,13 @@ def weight(uH, VH):
     return max(abs(np.sum([v-u for v in V], 0)))
 
 def toStrong(uH, collapses):
+    #return collapses.get(uH, uH)
     while uH in collapses:
         uH = collapses[uH]
     return uH
 
 def reduce(mesh, N):
+    print("INDEXING")
     neighbours = defaultdict(set)
     for face in mesh.vectors:
         for ui, u in enumerate(face):
@@ -30,40 +32,48 @@ def reduce(mesh, N):
             uH = tuple(u)
             neighbours[vH].add(uH)
             neighbours[uH].add(vH)
+    print("Found {} vertices. Reducing to {}.".format(len(neighbours), N))
+    print("WEIGHING")
     weights = dict()
     for uH, VH in neighbours.items():
         weights[uH] = weight(uH, VH)
+    print("SORTING")
     vertices = sorted(weights.items(), key = lambda x: x[1], reverse = True)
     n = len(vertices) - 1
     if N < n: n = N
     u, cutoff_weight = vertices[n] ## first of the weak points
+    print("FILTERING")
     #print(u, cutoff_weight)
     Sstrong = set([v[0] for v in vertices[:n]])
-    print(len(vertices), len(Sstrong), n)
     collapses = dict()
-    done = False
-    while not done:
-        done = True
-        for vH in Sstrong:
-            UH = neighbours[vH]
-            UH.difference_update(Sstrong)
-            N = set()
-            for uH in UH:
-                if uH in collapses: continue
-                done = False
+    queue = list(Sstrong)
+    while queue:
+        vH = queue.pop(0)
+        UH = neighbours[vH]
+        UH.difference_update(Sstrong)
+        add = set()
+        sub = set([vH])
+        for uH in UH:
+            if uH in Sstrong:
+                sub.add(uH)
+            if uH in collapses:
+                sub.add(uH)
+            else:
                 collapses[uH] = vH
-                N.update(neighbours[uH])
-            N.difference_update(set([vH]))
-            UH.update(N)
+                add.update(neighbours[uH])
+        UH.update(add)
+        UH.difference_update(sub)
+        if UH:
+            queue.append(vH)
 
     ## now write faces, translate all vertices if any two match ->delete
     data = np.zeros(50000, dtype = stl.mesh.Mesh.dtype)
     for i, face in enumerate(mesh.vectors):
         UH = [toStrong(tuple(u), collapses) for u in face]
         if UH[0] == UH[1] or UH[0] == UH[2] or UH[1] == UH[2]:
-            pass
-        else:
-            data['vectors'][i] = np.stack([np.array(uH) for uH in UH])
+            #colinear
+            continue
+        data['vectors'][i] = np.stack([np.array(uH) for uH in UH])
     reduced_mesh = stl.mesh.Mesh(data)
     return reduced_mesh
 
