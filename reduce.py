@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import stl, sys
 import numpy as np
 from collections import defaultdict
@@ -41,6 +42,10 @@ def traverse_collapses(uH, collapses):
     return uH
 
 def reduce(mesh, N):
+
+    ### First for all vertices we find all neighbouring vertices
+    ### All vertices are converted to tuples because numpy arrays
+    ### are non hashable.
     neighbours = defaultdict(set)
     l = len(mesh.vectors)
     for i, face in enumerate(mesh.vectors):
@@ -73,16 +78,18 @@ def reduce(mesh, N):
         ## neighbours might or might not already be collapsed, we dont care
         W = [traverse_collapses(v, collapses) for v in VH]
         W = [v for v in W if (v != uH)]
-        W = sorted(W, key = lambda x: np.linalg.norm(np.array(x) - np.array(uH))) #lightest first
-        vH = W[0]
+        if not W: break
+        #W = sorted(W, key = lambda x: np.linalg.norm(np.array(x) - np.array(uH))) #lightest first
+        vH = min(W, key = lambda x: np.linalg.norm(np.array(x) - np.array(uH))) #lightest first
+        #vH = W[0]
         collapses[uH] = vH
         UH = neighbours[vH]
         UH.update(VH)
         UH.discard(uH)
-        if vH in queue:
-            weights[vH] = weight(vH, UH)
-            queue.remove(vH)
-            insort(queue, vH, key = lambda x: weights[x])
+        ## If vH is already 
+        weights[vH] = weight(vH, UH)
+        queue.remove(vH)
+        insort(queue, vH, key = lambda x: weights[x])
     print("", file=sys.stderr)
 
     ## now write faces, translate all vertices if any two match ->delete
@@ -97,7 +104,7 @@ def reduce(mesh, N):
     reduced_mesh = stl.mesh.Mesh(data[:face_count])
     return reduced_mesh
 
-if False:
+if __name__ == "__main__":
     mesh = stl.mesh.Mesh.from_file(sys.argv[1])
     reduced_mesh = reduce(mesh, int(sys.argv[2]))
     reduced_mesh.save("out.stl", mode=stl.Mode.ASCII)  # save as ASCII
