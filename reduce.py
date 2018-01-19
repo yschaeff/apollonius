@@ -81,9 +81,14 @@ def reduce(mesh, N):
     print("SORTING", file=sys.stderr)
     queue = sorted(weights.keys(), key = lambda x: weights[x])
     collapses = dict()
+    removed = defaultdict(int)
     while len(queue) > N:
-        print("FILTERING queue: {} target: {} ({:.2f}%) \r".format(len(queue), N, 100-(100*(len(queue)-N)/len(weights))), end="", file=sys.stderr)
+        if not len(queue)%100:
+            print("FILTERING queue: {} target: {} ({:.2f}%) \r".format(len(queue), N, 100-(100*(len(queue)-N)/len(weights))), end="", file=sys.stderr)
         uH = queue.pop(0)
+        if removed[uH] > 0:
+            removed[uH] -= 1
+            continue
         VH = neighbours[uH]
 
         ## neighbours might or might not already be collapsed, we dont care
@@ -96,7 +101,7 @@ def reduce(mesh, N):
         UH.discard(uH)
         ## If vH is already 
         weights[vH] = weight(vH, UH)
-        queue.remove(vH)
+        removed[vH] += 1
         insort(queue, vH, key = lambda x: weights[x])
     print("", file=sys.stderr)
 
