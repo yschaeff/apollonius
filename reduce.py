@@ -41,12 +41,24 @@ def traverse_collapses(uH, collapses):
         uH = collapses[uH]
     return uH
 
+def edgelen(x):
+    return np.linalg.norm(np.array(x[0]) - np.array(x[1]))
+
+def ddict(mapping, key, func):
+    if key not in mapping:
+        v = func(key)
+        a, b = key
+        mapping[key] = mapping[(b, a)] = v
+        return v
+    return mapping[key]
+
 def reduce(mesh, N):
 
     ### First for all vertices we find all neighbouring vertices
     ### All vertices are converted to tuples because numpy arrays
     ### are non hashable.
     neighbours = defaultdict(set)
+    edge_len = dict()
     l = len(mesh.vectors)
     for i, face in enumerate(mesh.vectors):
         print("INDEXING face: {} ({:.2f}%) \r".format(i, (100*(i/l))), end="", file=sys.stderr)
@@ -73,15 +85,11 @@ def reduce(mesh, N):
         print("FILTERING queue: {} target: {} ({:.2f}%) \r".format(len(queue), N, 100-(100*(len(queue)-N)/len(weights))), end="", file=sys.stderr)
         uH = queue.pop(0)
         VH = neighbours[uH]
-        VH.discard(uH)
 
         ## neighbours might or might not already be collapsed, we dont care
         W = [traverse_collapses(v, collapses) for v in VH]
         W = [v for v in W if (v != uH)]
-        if not W: break
-        #W = sorted(W, key = lambda x: np.linalg.norm(np.array(x) - np.array(uH))) #lightest first
-        vH = min(W, key = lambda x: np.linalg.norm(np.array(x) - np.array(uH))) #lightest first
-        #vH = W[0]
+        vH = min(W, key = lambda v: ddict(edge_len, (uH, v), edgelen)) #lightest first
         collapses[uH] = vH
         UH = neighbours[vH]
         UH.update(VH)
