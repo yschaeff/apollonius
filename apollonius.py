@@ -82,6 +82,10 @@ else:
     print("unknown input file type")
     sys.exit(1)
 
+## always write pickefile
+print("Pickling")
+with open(".tmp.pickle", 'wb') as f:
+    pickle.dump((args, cspheres), f, pickle.HIGHEST_PROTOCOL)
 
 out_ext = args.output.split(".")[-1].lower()
 if out_ext == "stl":

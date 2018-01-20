@@ -32,9 +32,7 @@ def weight(uH, VH):
     The weight of vertex uH given its neighbour vertices.
     Simplified curvature.
     """
-    u = np.array(uH)
-    V = [np.array(v) for v in VH]
-    return max(abs(np.sum([v-u for v in V], 0)))
+    return max(abs(np.sum(np.stack(VH), 0) - len(VH) * np.array(uH)))
 
 def traverse_collapses(uH, collapses):
     while uH in collapses:
