@@ -61,6 +61,7 @@ def apolloniate(solid, points, E, MAX_E, pack):
         c.radius = min(r, MAX_E)
         c.wi = defaultdict(int)
     
+    candidates = [c for c in candidates if c.radius > 0]
     ot = octree.Octree(bb)
     for winner in winners:
         ot.insert(winner)
@@ -84,6 +85,7 @@ def apolloniate(solid, points, E, MAX_E, pack):
         if not r: # niet gelukt
             bisect.insort_left(candidates, candidate)
         else:
+            assert(candidate.radius)
             winners.append(candidate)
     print("", file=sys.stderr)
     return winners

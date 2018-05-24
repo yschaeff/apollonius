@@ -2,14 +2,14 @@
 def sphere_to_scad_color(sphere, E, r, g, b):
     extra = E/10
     s = "translate([%g, %g, %g]) color([%g, %g, %g, 1]) sphere(r=%g);" % (*sphere.center, r, g, b, sphere.radius+extra)
-    if sphere.bounding:
+    if sphere.is_face:
         return "//" + s
     return s
 
 def sphere_to_scad(sphere, E):
     extra = E/10
     s = "translate([%g, %g, %g]) sphere(r=%g);" % (*sphere.center, sphere.radius+extra)
-    if sphere.bounding:
+    if sphere.is_face:
         return "//" + s
     return s
 

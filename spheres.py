@@ -3,17 +3,19 @@ import numpy as np
 from stl3d import line_triangle_intersection
 
 class Sphere:
+    """ a Sphere is either a true sphere or a face representing a sphere"""
 
     def __init__(self, center, radius=math.inf, face=None, normal=None):
         self.center = center
         self.radius = radius
         self.face = face
         self.normal = normal
-        self.bounding = face is not None
+        self.is_face = face is not None
+        assert(not ((face is not None) ^ (normal is not None)))
         self.dead = False
 
     def shrink(self, other, E):
-        if other.bounding:
+        if other.is_face:
             #distance is min distance to vertices
             #if projection in polygon consider it as well.
             dd = [np.linalg.norm(self.center - v) for v in other.face]
@@ -32,13 +34,12 @@ class Sphere:
             distance = np.linalg.norm(self.center - other.center) - other.radius
         if distance >= self.radius: return
         if distance < E/2:
-            #print(other.center[0])
             self.dead = True
         elif self.radius > distance:
             self.radius = distance
 
     def bb(self):
-        if not self.bounding:
+        if not self.is_face:
             smin = self.center - self.radius
             smax = self.center + self.radius
         else:

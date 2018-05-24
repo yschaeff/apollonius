@@ -12,7 +12,7 @@ def sphere2mesh(sphere, sprite, E):
     return copy
 
 def write_spheres(spheres, outfile, sprite, E):
-    sprites = [sphere2mesh(sphere, sprite, E) for sphere in spheres if not sphere.bounding]
+    sprites = [sphere2mesh(sphere, sprite, E) for sphere in spheres if not sphere.is_face]
     if not sprites:
         print("No samples found")
     else:
